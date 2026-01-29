@@ -1,20 +1,18 @@
 export interface ElectronAPI {
-  testRemoteMCP: () => Promise<{
-    success: boolean;
-    tools?: Array<{ name: string; description: string }>;
-    error?: string;
-  }>;
-  testLocalMCP: () => Promise<{
-    success: boolean;
-    tools?: Array<{ name: string; description: string }>;
-    error?: string;
-  }>;
-  generateWithMCP: (prompt: string) => Promise<{
-    success: boolean;
-    text?: string;
-    steps?: number;
-    error?: string;
-  }>;
+  // MCP OAuth functions
+  getAvailableMCPs: () => Promise<Array<{ name: string; url: string }>>;
+  connectMCP: (mcpName: string) => Promise<{ success: boolean; needsAuth?: boolean; tools?: any[] }>;
+  finishOAuth: (mcpName: string, authCode: string) => Promise<{ success: boolean; tools?: any[] }>;
+  getConnectedMCPs: () => Promise<string[]>;
+  
+  // OAuth callback listener
+  onOAuthCallback: (callback: (code: string) => void) => void;
+  
+  // AI generation
+  generateWithMCP: (prompt: string) => void;
+  onAgentStep: (callback: (step: string) => void) => void;
+  onGenerateComplete: (callback: (result: any) => void) => void;
+  onGenerateError: (callback: (result: any) => void) => void;
 }
 
 declare global {

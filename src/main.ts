@@ -8,9 +8,20 @@ if (started) {
   app.quit();
 }
 
+// Set as default protocol client for OAuth callbacks
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('myapp', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('myapp');
+}
+
+let mainWindow: BrowserWindow | null = null;
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
@@ -28,6 +39,26 @@ const createWindow = () => {
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 };
+
+// Handle OAuth callback protocol
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  console.log('OAuth callback received:', url);
+  
+  if (url.startsWith('myapp://oauth/callback')) {
+    const urlObj = new URL(url);
+    const code = urlObj.searchParams.get('code');
+    
+    if (code && mainWindow) {
+      // Send the auth code to the renderer process
+      mainWindow.webContents.send('oauth-callback', code);
+      
+      // Focus the app window
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  }
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
