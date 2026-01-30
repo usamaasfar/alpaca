@@ -1,9 +1,9 @@
-import WelcomeScreen from "@/renderer/screens/welcome";
+import ComposerScreen from "@/renderer/screens/composer";
 
 const App = () => {
   return (
     <main className="h-screen w-screen ">
-      <WelcomeScreen />
+      <ComposerScreen />
     </main>
   );
 };
