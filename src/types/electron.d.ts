@@ -1,4 +1,10 @@
 export interface ElectronAPI {
+  // AI Composer
+  aiCompose: (prompt: string) => void;
+  onAIStep: (callback: (step: any) => void) => void;
+  onAIComplete: (callback: (result: any) => void) => void;
+  onAIError: (callback: (error: string) => void) => void;
+  
   // MCP OAuth functions
   getAvailableMCPs: () => Promise<Array<{ name: string; url: string }>>;
   connectMCP: (mcpName: string) => Promise<{ success: boolean; needsAuth?: boolean; tools?: any[] }>;

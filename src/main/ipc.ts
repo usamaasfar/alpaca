@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import composer from "./ai/index";
 import { MCPManager } from "./smithery";
 
 const mcpManager = new MCPManager();
@@ -44,4 +45,25 @@ ipcMain.handle("finish-oauth", async (event, mcpName: string, authCode: string) 
   }
 
   return await mcpManager.finishOAuth(mcp.name, mcp.url, authCode);
+});
+
+// AI Composer handler
+ipcMain.on("ai-compose", async (event, prompt: string) => {
+  try {
+    const agent = composer([]);
+
+    const result = await agent?.generate({
+      prompt,
+      onStepFinish: (step) => {
+        console.log(`Step ${step.text}:`, step);
+        event.reply("ai-step", step);
+      },
+    });
+
+    console.log("AI Response:", result);
+    event.reply("ai-complete", result);
+  } catch (error) {
+    console.error("AI Error:", error);
+    event.reply("ai-error", error.message);
+  }
 });

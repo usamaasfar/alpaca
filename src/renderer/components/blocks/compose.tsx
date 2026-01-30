@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
 import * as Mention from "@diceui/mention";
-import { Dialog, DialogContent } from "../ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage, AvatarGroup } from "../ui/avatar";
+import { useEffect, useState } from "react";
 import { Kbd, KbdGroup } from "@/renderer/components/ui/kbd";
+import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "../ui/avatar";
+import { Dialog, DialogContent } from "../ui/dialog";
 
 const mcps = [
   {
@@ -27,7 +27,7 @@ const mcps = [
   },
 ];
 
-export function Compose() {
+export function Compose({ onSubmit }: { onSubmit?: (prompt: string) => Promise<any> }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<string[]>([]);
 
@@ -44,23 +44,26 @@ export function Compose() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const onHandleSumbit = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const onHandleSumbit = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && e.metaKey) {
-      console.log((e.target as HTMLTextAreaElement).value);
+      const prompt = (e.target as HTMLTextAreaElement).value;
+      console.log("Sending prompt:", prompt);
+
+      try {
+        if (onSubmit) {
+          await onSubmit(prompt);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+
       setOpen(false);
     }
     if (e.key === "Tab") {
       e.preventDefault();
       // Create and dispatch a proper Enter event
       const target = e.target as HTMLTextAreaElement;
-      target.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "Enter",
-          code: "Enter",
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
+      target.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
     }
   };
 
@@ -108,15 +111,8 @@ export function Compose() {
                 {value.map((mention, index) => {
                   const mcp = mcps.find((m) => m.name === mention);
                   return (
-                    <Avatar
-                      key={index}
-                      size="sm"
-                      className="border-2 border-black bg-white"
-                    >
-                      <AvatarImage
-                        src={mcp?.icon}
-                        className="object-contain p-1"
-                      />
+                    <Avatar key={index} size="sm" className="border-2 border-black bg-white">
+                      <AvatarImage src={mcp?.icon} className="object-contain p-1" />
                       <AvatarFallback>{mention.slice(0, 1)}</AvatarFallback>
                     </Avatar>
                   );

@@ -1,8 +1,35 @@
-import { Kbd, KbdGroup } from "@/renderer/components/ui/kbd";
-import { Settings } from "@/renderer/components/blocks/settings";
+import type { StepResult } from "ai";
+import { useEffect } from "react";
 import { Compose } from "@/renderer/components/blocks/compose";
+import { Settings } from "@/renderer/components/blocks/settings";
+import { Kbd, KbdGroup } from "@/renderer/components/ui/kbd";
 
 const Welcome = () => {
+  useEffect(() => {
+    const stepHandler = (step) => {
+      console.log(`Step ${step.text}:`, step);
+    };
+
+    const completeHandler = (result) => {
+      console.log("AI Complete:", result);
+    };
+
+    const errorHandler = (error) => {
+      console.error("AI Error:", error);
+    };
+
+    window.electronAPI.onAIStep(stepHandler);
+    window.electronAPI.onAIComplete(completeHandler);
+    window.electronAPI.onAIError(errorHandler);
+
+    // Cleanup function would go here if the preload exposed removeListener methods
+  }, []);
+
+  const handleAIResponse = async (prompt: string) => {
+    console.log("Sending prompt:", prompt);
+    window.electronAPI.aiCompose(prompt);
+  };
+
   return (
     <>
       <div className="h-full flex flex-col items-center justify-center">
@@ -21,7 +48,7 @@ const Welcome = () => {
         </div>
       </div>
       <Settings />
-      <Compose />
+      <Compose onSubmit={handleAIResponse} />
     </>
   );
 };

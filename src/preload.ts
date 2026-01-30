@@ -2,6 +2,17 @@ import { contextBridge, ipcRenderer } from "electron";
 
 // Custom APIs for renderer
 const electronAPI = {
+  // AI Composer
+  aiCompose: (prompt: string) => ipcRenderer.send('ai-compose', prompt),
+  onAIStep: (callback: (step: any) => void) => {
+    ipcRenderer.on('ai-step', (_, step) => callback(step));
+  },
+  onAIComplete: (callback: (result: any) => void) => {
+    ipcRenderer.on('ai-complete', (_, result) => callback(result));
+  },
+  onAIError: (callback: (error: string) => void) => {
+    ipcRenderer.on('ai-error', (_, error) => callback(error));
+  },
   // MCP OAuth functions
   // getAvailableMCPs: () => ipcRenderer.invoke('get-available-mcps'),
   // connectMCP: (mcpName: string) => ipcRenderer.invoke('connect-mcp', mcpName),
