@@ -1,5 +1,11 @@
 import { createOpenAI } from "@ai-sdk/openai";
 
-export default createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY ?? "",
-});
+import storage from "~/main/utils/storage";
+
+export default function openaiProvider(model: string) {
+  const openai = createOpenAI({
+    apiKey: storage.secureStore.get("openai-provider-api-key"),
+  });
+
+  return openai(model);
+}

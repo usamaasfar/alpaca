@@ -1,14 +1,14 @@
 import { stepCountIs, type Tool, ToolLoopAgent, tool } from "ai";
 import { z } from "zod";
 
-import { getComposerPrompt } from "@/main/ai/prompt/composer";
-import ollama from "@/main/ai/providers/ollama";
+import composerPrompt from "~/main/ai/prompt/composer";
+import { model } from "~/main/ai/providers";
 
 function composer(tools: Tool[]) {
   try {
     const composer = new ToolLoopAgent({
-      instructions: getComposerPrompt(),
-      model: ollama("kimi-k2.5:cloud"),
+      instructions: composerPrompt,
+      model: model,
       stopWhen: stepCountIs(128),
       tools: {
         weather: tool({
@@ -38,6 +38,6 @@ function composer(tools: Tool[]) {
   } catch (error) {
     console.error(error);
   }
-} // composer().generate(prompt)
+}
 
 export default composer;

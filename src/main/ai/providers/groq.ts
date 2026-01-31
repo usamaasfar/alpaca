@@ -1,5 +1,11 @@
 import { createGroq } from "@ai-sdk/groq";
 
-export default createGroq({
-  apiKey: process.env.GROQ_API_KEY ?? "",
-});
+import storage from "~/main/utils/storage";
+
+export default function groqProvider(model: string) {
+  const groq = createGroq({
+    apiKey: storage.secureStore.get("groq-provider-api-key"),
+  });
+
+  return groq(model);
+}
