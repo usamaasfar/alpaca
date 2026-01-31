@@ -12,11 +12,11 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@/renderer/components",
-    "utils": "@/renderer/lib/utils",
-    "ui": "@/renderer/components/ui",
-    "lib": "@/renderer/lib",
-    "hooks": "@/renderer/hooks"
+    "components": "~/renderer/components",
+    "utils": "~/renderer/lib/utils",
+    "ui": "~/renderer/components/ui",
+    "lib": "~/renderer/lib",
+    "hooks": "~/renderer/hooks"
   },
   "registries": {
     "@diceui": "https://diceui.com/r/{name}.json"
