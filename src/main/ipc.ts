@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 
 import composer from "~/main/ai/agents/composer";
+import ollama from "~/main/services/ollama";
 import storage from "~/main/utils/storage";
 
 ipcMain.handle("set-storage", (_event, key: string, value: any) => {
@@ -52,10 +53,13 @@ ipcMain.handle("get-provider-config", (_event, provider: string) => {
   };
 });
 
-// // Get API key for specific provider
-// ipcMain.handle("get-provider-api-key", async (event, provider: string) => {
-//   return mainGetSecure(`apiKey_${provider}`, "");
-// });
+ipcMain.handle("get-ollama-health", async () => {
+  return await ollama.health();
+});
+
+ipcMain.handle("get-ollama-models", async () => {
+  return await ollama.models();
+});
 
 // // Get Ollama models
 // ipcMain.handle("get-ollama-models", async () => {
