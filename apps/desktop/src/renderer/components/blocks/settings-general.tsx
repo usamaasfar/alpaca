@@ -11,7 +11,7 @@ import { Input } from "~/renderer/components/ui/input";
 import { Label } from "~/renderer/components/ui/label";
 import { ScrollArea } from "~/renderer/components/ui/scroll-area";
 import { Textarea } from "~/renderer/components/ui/textarea";
-import { useSettingsStore } from "~/renderer/stores/settings";
+import { useGeneralSettingsStore } from "~/renderer/stores/general";
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(20, "Username must be at most 20 characters"),
@@ -19,7 +19,7 @@ const formSchema = z.object({
 });
 
 export const SettingsGeneral = () => {
-  const { username, customInstructions, isLoading, updateSettings } = useSettingsStore();
+  const { isLoading, username, customInstructions, setGeneralSetting, getGeneralSettings } = useGeneralSettingsStore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -27,61 +27,64 @@ export const SettingsGeneral = () => {
   });
 
   useEffect(() => {
+    getGeneralSettings();
+  }, [getGeneralSettings]);
+
+  useEffect(() => {
     form.reset({ username, customInstructions });
   }, [form, username, customInstructions]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    await updateSettings(data);
+    await setGeneralSetting(data);
   };
 
   return (
-    <Card className="relative h-full flex flex-col">
+    <Card className="relative h-full">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50 rounded-xl">
           <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
-      <CardHeader className="flex-shrink-0">
+      <CardHeader>
         <CardDescription>Configure how the AI should interact with you</CardDescription>
       </CardHeader>
       <ScrollArea className="flex-1 h-0">
         <CardContent className="pb-6">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Controller
-            name="username"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <Label htmlFor={field.name}>Username</Label>
-                <Input {...field} id={field.name} placeholder="How should the AI call you?" aria-invalid={fieldState.invalid} />
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-              </Field>
-            )}
-          />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Controller
+              name="username"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <Label htmlFor={field.name}>Username</Label>
+                  <Input {...field} id={field.name} placeholder="How should the AI call you?" aria-invalid={fieldState.invalid} />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
 
-          <Controller
-            name="customInstructions"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <Label htmlFor={field.name}>Custom Instructions</Label>
-                <Textarea
-                  {...field}
-                  id={field.name}
-                  placeholder="Add custom instructions for the AI..."
-                  rows={6}
-                  aria-invalid={fieldState.invalid}
-                />
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-              </Field>
-            )}
-          />
+            <Controller
+              name="customInstructions"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <Label htmlFor={field.name}>Custom Instructions</Label>
+                  <Textarea
+                    {...field}
+                    id={field.name}
+                    placeholder="Add custom instructions for the AI..."
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
 
-          <Button type="submit" className="w-full" disabled={!form.formState.isDirty}>
-            Save
-          </Button>
-        </form>
-      </CardContent>
+            <Button type="submit" className="w-full" disabled={!form.formState.isDirty}>
+              Save
+            </Button>
+          </form>
+        </CardContent>
       </ScrollArea>
     </Card>
   );
