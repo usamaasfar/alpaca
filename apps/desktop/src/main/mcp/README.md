@@ -3,16 +3,22 @@
 ### 1. **User Clicks "Install" on MCP Server**
 
 ```typescript
-await remote.connectServer("exa");
+const result = await remote.connectServer({
+  namespace: "gmail",
+  displayName: "Gmail",
+  iconUrl: "...",
+  verified: true,
+  homepage: "..."
+});
 ```
 
 **What happens:**
 
-1. Creates `OAuthClientProvider` for "exa"
-2. Provider checks secure storage for saved tokens
+1. Creates `OAuthClientProvider` for the namespace
+2. Provider checks secure storage for saved tokens (`mcp-{namespace}-auth`)
 3. If tokens exist → loads them
 4. Creates MCP client with the provider
-5. Tries to get tools from server
+5. Tries to connect to server
 
 **Two paths from here:**
 
@@ -21,8 +27,9 @@ await remote.connectServer("exa");
 ```
 ✓ Tokens exist in storage
 ✓ Server accepts them
-✓ Returns { success: true, tools: {...} }
-✓ Saves "exa" to connected servers list
+✓ Client connection established
+✓ Returns { reAuth: false }
+✓ Saves server to connected list
 ```
 
 #### Path B: Needs OAuth
@@ -30,7 +37,9 @@ await remote.connectServer("exa");
 ```
 ✗ No tokens (or expired)
 ✗ Server returns 401 Unauthorized
-✓ Returns { success: false, needsAuth: true }
+✓ OAuth flow automatically starts (browser opens)
+✓ Returns { reAuth: true }
+✓ UI sets pendingOAuthNamespace and keeps button disabled
 ```
 
 ---
@@ -107,28 +116,44 @@ provider.deleteTokens(); // Removes from secure storage
 User Clicks Install
        │
        ▼
-connectServer("exa")
+connectServer(server)
        │
        ├─> OAuthClientProvider created
-       │   └─> Loads tokens from secure storage
+       │   └─> Loads tokens from secure storage (mcp-{namespace}-auth)
        │
        ├─> Creates MCP client
        │
        ▼
-  Try to get tools
+  Try to connect
        │
        ├──────────────┬──────────────┐
        │              │              │
-   Has Tokens    No Tokens      Expired
-       │              │              │
-       ▼              ▼              ▼
-   SUCCESS      NEEDS OAUTH    NEEDS OAUTH
+   Has Valid      No Tokens      Expired
+    Tokens            │              │
+       │              ▼              ▼
+       │         UnauthorizedError thrown
        │              │
-       │              ├─> Opens browser
-       │              ├─> User authorizes
-       │              ├─> Callback with code
-       │              ├─> Token exchange
-       │              └─> saveTokens() → secure storage
+       │              ├─> Caught by connectServer
+       │              ├─> Browser opens for OAuth
+       │              ├─> Returns { reAuth: true }
+       │              ├─> UI sets pendingOAuthNamespace
+       │              └─> Button stays disabled
+       │                          │
+       ▼                          ▼
+   SUCCESS              User authorizes in browser
+       │                          │
+       │                          ▼
+       │              integral.computer://oauth/callback?code=...
+       │                          │
+       │                          ▼
+       │              IPC event: mcp-oauth-callback
+       │                          │
+       │                          ▼
+       │              completeOAuth(namespace, code)
+       │                          │
+       │              ├─> Exchange code for tokens
+       │              ├─> saveTokens() → secure storage
+       │              └─> Reconnect with new tokens
        │                          │
        └──────────────────────────┘
                      │
@@ -136,7 +161,7 @@ connectServer("exa")
               Save to connected list
                      │
                      ▼
-              Tools available!
+           Connection established!
 ```
 
 ---
