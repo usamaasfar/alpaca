@@ -89,16 +89,16 @@ ipcMain.on("ai-compose", async (event, prompt: string, mentions?: string[]) => {
     console.log("Prompt:", prompt);
     console.log("Mentions:", mentions);
 
-    // Get MCP tools based on mentions
+    // Get MCP tools based on mentions (from cache - instant)
     let mcpTools = {};
 
     if (mentions && mentions.length > 0) {
       console.log(`Loading tools for mentioned servers: ${mentions.join(", ")}`);
-      mcpTools = await remote.getToolsFromServers(mentions);
+      mcpTools = remote.getToolsFromServers(mentions);
       console.log(`Loaded ${Object.keys(mcpTools).length} MCP tools`);
     } else {
       console.log("No mentions provided - loading all available MCP tools");
-      mcpTools = await remote.getAllTools();
+      mcpTools = remote.getAllTools();
       console.log(`Loaded ${Object.keys(mcpTools).length} MCP tools from all connected servers`);
     }
 

@@ -118,6 +118,7 @@ export class OAuthClientProvider {
 
 const connectionClients = new Map<any, any>();
 const authProviders = new Map<string, OAuthClientProvider>();
+const toolsCache = new Map<string, Record<string, any>>();
 
 function getServerUrl(namespace: string): string {
   return `https://server.smithery.ai/${namespace}`;
@@ -146,6 +147,24 @@ function loadConnectedServers(): Record<string, server> {
   return storage.store.get("remote-connected-servers", {}) as Record<string, server>;
 }
 
+/**
+ * Load and cache tools from a specific MCP server
+ */
+async function loadAndCacheTools(namespace: string): Promise<void> {
+  const client = connectionClients.get(namespace);
+  if (!client) return;
+
+  try {
+    if (typeof client.tools === "function") {
+      const tools = await client.tools();
+      toolsCache.set(namespace, tools);
+      console.log(`Cached ${Object.keys(tools).length} tools from ${namespace}`);
+    }
+  } catch (error) {
+    console.error(`Failed to cache tools from ${namespace}:`, error);
+  }
+}
+
 export default {
   async connectServer(server: server) {
     try {
@@ -160,6 +179,9 @@ export default {
       const client = await createMCPClient({ transport: { type: "http", url: getServerUrl(server.namespace), authProvider } });
       saveConnectedServers(server);
       connectionClients.set(server.namespace, client);
+
+      // Cache tools immediately after connection
+      await loadAndCacheTools(server.namespace);
 
       return { reAuth: false };
     } catch (error: any) {
@@ -180,6 +202,9 @@ export default {
     const client = connectionClients.get(namespace);
     if (client) await client.close();
     connectionClients.delete(namespace);
+
+    // Clear cached tools
+    toolsCache.delete(namespace);
 
     // Delete OAuth tokens
     const authProvider = authProviders.get(namespace);
@@ -303,6 +328,9 @@ export default {
 
         connectionClients.set(namespace, client);
         console.log(`Reconnected to ${namespace}`);
+
+        // Cache tools after reconnection
+        await loadAndCacheTools(namespace);
       } catch (error) {
         console.error(`Failed to reconnect to ${namespace}:`, error);
       }
@@ -312,61 +340,40 @@ export default {
   },
 
   /**
-   * Get all tools from connected MCP servers
+   * Get all tools from connected MCP servers (uses cache)
    * Returns: Object with tools from all connected servers
    */
-  async getAllTools() {
+  getAllTools() {
     const allTools: Record<string, any> = {};
 
-    for (const [namespace, client] of connectionClients.entries()) {
-      try {
-        if (client && typeof client.tools === "function") {
-          // Call the tools() method to get tools from this MCP client
-          const clientTools = await client.tools();
-          console.log(`Loading tools from ${namespace}:`, Object.keys(clientTools).length);
-
-          // Merge tools from this server
-          Object.assign(allTools, clientTools);
-        }
-      } catch (error) {
-        console.error(`Failed to get tools from ${namespace}:`, error);
-      }
+    for (const [, tools] of toolsCache.entries()) {
+      Object.assign(allTools, tools);
     }
 
-    console.log(`Total MCP tools available: ${Object.keys(allTools).length}`);
+    console.log(`Total cached MCP tools available: ${Object.keys(allTools).length} from ${toolsCache.size} servers`);
     return allTools;
   },
 
   /**
-   * Get tools from specific MCP servers by namespace
+   * Get tools from specific MCP servers by namespace (uses cache)
    * @param namespaces - Array of namespaces to get tools from (e.g., ['gmail', 'linear'])
    * Returns: Object with tools from specified servers
    */
-  async getToolsFromServers(namespaces: string[]) {
+  getToolsFromServers(namespaces: string[]) {
     const tools: Record<string, any> = {};
 
     for (const namespace of namespaces) {
-      const client = connectionClients.get(namespace);
+      const cachedTools = toolsCache.get(namespace);
 
-      if (client) {
-        try {
-          if (typeof client.tools === "function") {
-            // Call the tools() method to get tools from this MCP client
-            const clientTools = await client.tools();
-            console.log(`Loading tools from ${namespace}:`, Object.keys(clientTools).length);
-            Object.assign(tools, clientTools);
-          } else {
-            console.warn(`MCP server "${namespace}" connected but tools() method not available`);
-          }
-        } catch (error) {
-          console.error(`Failed to get tools from ${namespace}:`, error);
-        }
+      if (cachedTools) {
+        Object.assign(tools, cachedTools);
+        console.log(`Using cached tools from ${namespace}:`, Object.keys(cachedTools).length);
       } else {
-        console.warn(`MCP server "${namespace}" not connected`);
+        console.warn(`MCP server "${namespace}" not connected or tools not cached`);
       }
     }
 
-    console.log(`Total MCP tools from specified servers: ${Object.keys(tools).length}`);
+    console.log(`Total cached tools from ${namespaces.length} servers: ${Object.keys(tools).length}`);
     return tools;
   },
 };

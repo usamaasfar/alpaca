@@ -2,7 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ScrollArea } from "~/renderer/components/ui/scroll-area";
 
-export const ComposerResult = ({ result }) => {
+export const ComposerResult = ({ result }: { result: string }) => {
   return (
     <>
       {result && (
