@@ -63,7 +63,7 @@ ipcMain.handle("disconnect-remote-server", async (_event, namespace: string) => 
   }
 });
 
-ipcMain.handle("list-connected-mcps", async () => {
+ipcMain.handle("list-connected-remote-servers", async () => {
   try {
     return remote.listConnectedServers();
   } catch (error) {

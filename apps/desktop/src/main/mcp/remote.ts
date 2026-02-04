@@ -2,6 +2,8 @@ import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
 import { shell } from "electron";
 import storage from "~/main/utils/storage";
 
+import type { server } from "~/renderer/stores/servers";
+
 /**
  * OAuth client provider for MCP servers
  * Handles authentication and token persistence using OS secure storage
@@ -114,41 +116,38 @@ export class OAuthClientProvider {
   }
 }
 
-const connections = new Map<any, any>();
+const connectionClients = new Map<any, any>();
 const authProviders = new Map<string, OAuthClientProvider>();
 
 function getServerUrl(namespace: string): string {
   return `https://server.smithery.ai/${namespace}`;
 }
 
-function saveConnectedServers(server) {
-  const storedServers = storage.secureStore.get("remote-connected-servers");
+function saveConnectedServers(server: server) {
+  const storedServers = storage.store.get("remote-connected-servers") as Record<string, server> | undefined;
   if (storedServers) {
-    console.log({ ...JSON.parse(storedServers), server });
-    const servers = { ...JSON.parse(storedServers), [server.namespace]: server };
-    storage.secureStore.set("remote-connected-servers", JSON.stringify(servers));
+    const servers = { ...storedServers, [server.namespace]: server };
+    storage.store.set("remote-connected-servers", servers as any);
   } else {
-    storage.secureStore.set("remote-connected-servers", JSON.stringify({ [server.namespace]: server }));
+    storage.store.set("remote-connected-servers", { [server.namespace]: server } as any);
   }
 }
 
 function removeConnectedServer(namespace: string) {
-  const storedServers = storage.secureStore.get("remote-connected-servers");
+  const storedServers = storage.store.get("remote-connected-servers") as Record<string, server> | undefined;
   if (storedServers) {
-    const servers = JSON.parse(storedServers);
+    const servers = { ...storedServers };
     delete servers[namespace];
-    storage.secureStore.set("remote-connected-servers", JSON.stringify(servers));
+    storage.store.set("remote-connected-servers", servers as any);
   }
 }
 
-function loadConnectedServers() {
-  const servers = storage.secureStore.get("remote-connected-servers");
-  if (servers) return JSON.parse(servers);
-  else return {};
+function loadConnectedServers(): Record<string, server> {
+  return storage.store.get("remote-connected-servers", {}) as Record<string, server>;
 }
 
 export default {
-  async connectServer(server: any) {
+  async connectServer(server: server) {
     try {
       console.log(server);
       console.log(`Connecting to ${server.namespace}`);
@@ -158,26 +157,54 @@ export default {
         authProviders.set(server.namespace, authProvider);
       }
 
-      await createMCPClient({ transport: { type: "http", url: getServerUrl(server.namespace), authProvider } });
+      const client = await createMCPClient({ transport: { type: "http", url: getServerUrl(server.namespace), authProvider } });
       saveConnectedServers(server);
-      connections.set(server.namespace, server);
+      connectionClients.set(server.namespace, client);
 
       return { reAuth: false };
     } catch (error: any) {
+      // If unauthorized, OAuth flow has started - wait for callback
+      if (error.message?.includes("Unauthorized") || error.code === "UNAUTHORIZED") {
+        console.log(`OAuth flow initiated for ${server.namespace}, waiting for authorization...`);
+        saveConnectedServers(server); // Save server even if not connected yet
+        return { reAuth: true };
+      }
+
       console.error(`Failed to connect to ${server.namespace}:`, error);
       throw error;
     }
   },
 
   async disconnectServer(namespace: string) {
-    const client = connections.get(namespace);
-    // if client is connected remote it else skip.
+    // Close the active connection
+    const client = connectionClients.get(namespace);
     if (client) await client.close();
+    connectionClients.delete(namespace);
+
+    // Delete OAuth tokens
+    const authProvider = authProviders.get(namespace);
+    if (authProvider) {
+      authProvider.deleteTokens();
+      authProviders.delete(namespace);
+    }
+
+    // Remove from saved servers list
     removeConnectedServer(namespace);
   },
 
-  listConnectedServers(): string[] {
-    return loadConnectedServers();
+  /**
+   * List all saved servers with their current connection status
+   * Returns: { namespace: { ...serverData, connected: boolean } }
+   */
+  listConnectedServers(): Record<string, server & { connected: boolean }> {
+    const savedServers = loadConnectedServers();
+    const result: Record<string, server & { connected: boolean }> = {};
+
+    for (const [namespace, serverData] of Object.entries(savedServers)) {
+      result[namespace] = { ...serverData, connected: connectionClients.has(namespace) };
+    }
+
+    return result;
   },
 
   async completeOAuth(namespace: string, authCode: string) {
@@ -236,16 +263,17 @@ export default {
 
       console.log(`OAuth completed for ${namespace}. Reconnecting...`);
 
-      const result = await this.connectServer(namespace);
+      // Get the saved server data
+      const savedServers = loadConnectedServers();
+      const serverData = savedServers[namespace];
 
-      if (result.success && result.tools) {
-        return {
-          success: true,
-          tools: Object.keys(result.tools),
-        };
+      if (!serverData) {
+        throw new Error(`Server data not found for ${namespace}`);
       }
 
-      return result;
+      await this.connectServer(serverData);
+
+      return { success: true, reAuth: false };
     } catch (error: any) {
       console.error(`Failed to complete OAuth for ${namespace}:`, error);
       throw error;
@@ -254,27 +282,32 @@ export default {
 
   async reconnectAll() {
     const savedServers = loadConnectedServers();
-    console.log(`Reconnecting to ${savedServers} servers`, savedServers);
+    const namespaces = Object.keys(savedServers);
 
-    // for (const namespace of savedServers) {
-    //   try {
-    //     const authProvider = new OAuthClientProvider(namespace);
-    //     authProviders.set(namespace, authProvider);
+    console.log(`Reconnecting to ${namespaces.length} saved servers`, namespaces);
 
-    //     if (!authProvider.tokens()) {
-    //       console.log(`No tokens for ${namespace}, skipping`);
-    //       continue;
-    //     }
+    for (const namespace of namespaces) {
+      try {
+        // Create or reuse auth provider
+        let authProvider = authProviders.get(namespace);
+        if (!authProvider) {
+          authProvider = new OAuthClientProvider(namespace);
+          authProviders.set(namespace, authProvider);
+        }
 
-    //     const client = await createMCPClient({
-    //       transport: { type: "http", url: getServerUrl(namespace), authProvider },
-    //     });
+        // Skip if no tokens (will need re-auth) - shows disconnected
+        if (!authProvider.tokens()) continue;
 
-    //     connections.set(namespace, client);
-    //     console.log(`Reconnected to ${namespace}`);
-    //   } catch (error) {
-    //     console.error(`Failed to reconnect to ${namespace}:`, error);
-    //   }
-    // }
+        // Attempt reconnection
+        const client = await createMCPClient({ transport: { type: "http", url: getServerUrl(namespace), authProvider } });
+
+        connectionClients.set(namespace, client);
+        console.log(`Reconnected to ${namespace}`);
+      } catch (error) {
+        console.error(`Failed to reconnect to ${namespace}:`, error);
+      }
+    }
+
+    console.log(`Reconnection complete: ${connectionClients.size}/${namespaces.length} servers connected`);
   },
 };
