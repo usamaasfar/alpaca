@@ -32,6 +32,15 @@ ipcMain.handle("get-ollama-models", async () => {
   return await ollama.models();
 });
 
+ipcMain.handle("search-remote-mcp-servers", async (_event, term: string) => {
+  try {
+    return await smitheryService.searchServers(term);
+  } catch (error) {
+    console.error("MCP search error:", error);
+    throw error;
+  }
+});
+
 // AI Composer handler
 ipcMain.on("ai-compose", async (event, prompt: string, mentions?: string[]) => {
   try {
@@ -65,16 +74,6 @@ ipcMain.on("ai-compose", async (event, prompt: string, mentions?: string[]) => {
   } catch (error) {
     console.error("AI Error:", error);
     event.reply("ai-error", error.message);
-  }
-});
-
-// MCP handlers
-ipcMain.handle("search-mcp-servers", async (_event, term: string) => {
-  try {
-    return await smitheryService.searchServers(term);
-  } catch (error) {
-    console.error("MCP search error:", error);
-    throw error;
   }
 });
 
@@ -163,7 +162,7 @@ ipcMain.handle("list-connected-mcps", async () => {
 });
 
 // Open URL in system browser
-ipcMain.handle("open-external", async (_event, url: string) => {
+ipcMain.handle("open-external-link", async (_event, url: string) => {
   try {
     await shell.openExternal(url);
     return { success: true };

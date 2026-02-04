@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import ComposerScreen from "~/renderer/screens/composer";
+// import ComposerScreen from "~/renderer/screens/composer";
 import SettingsScreen from "~/renderer/screens/settings";
 import { useSettingsStore } from "~/renderer/stores/settings";
 

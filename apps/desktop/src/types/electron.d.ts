@@ -5,23 +5,21 @@ export interface ElectronAPI {
   setSecureStorage: (key: string, value: string) => Promise<boolean>;
   getSecureStorage: (key: string) => Promise<string>;
 
-  // Settings
-  setSettings: (settings: any) => Promise<boolean>;
-  getSettings: () => Promise<{ username: string; customInstructions: string }>;
-
-  // Provider Config
-  saveProviderConfig: (config: any) => Promise<boolean>;
-  getProviderConfig: (provider: string) => Promise<{ apiKey: string; config: any }>;
-
-  // Ollama
+  // Providers
   getOllamaHealth: () => Promise<boolean>;
   getOllamaModels: () => Promise<string[]>;
 
-  // AI Composition
-  aiCompose: (prompt: string, mentions?: string[]) => Promise<any>;
-  onAIStep: (callback: (step: any) => void) => void;
-  onAIComplete: (callback: (result: any) => void) => void;
-  onAIError: (callback: (error: any) => void) => void;
+  // Servers
+  searchRemoteMCPServers: (term: string) => Promise<any>;
+
+  // // AI Composition
+  // aiCompose: (prompt: string, mentions?: string[]) => Promise<any>;
+  // onAIStep: (callback: (step: any) => void) => void;
+  // onAIComplete: (callback: (result: any) => void) => void;
+  // onAIError: (callback: (error: any) => void) => void;
+
+  // System
+  openExternalLink: (url: string) => Promise<void>;
 }
 
 declare global {
