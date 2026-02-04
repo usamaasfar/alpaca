@@ -1,6 +1,6 @@
 import Smithery from "@smithery/api";
 
-const client = new Smithery({ apiKey: "0d61b2e2-3b2e-4f04-b536-3cad6ca12431" });
+const client = new Smithery({ apiKey: process.env.SMITHERY_API_KEY });
 
 export default {
   health: async () => {
