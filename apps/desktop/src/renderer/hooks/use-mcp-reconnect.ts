@@ -17,7 +17,7 @@ export function useMCPReconnect() {
         if (status.total === 0) {
           toast.info("No servers to reconnect", { id: toastId.current });
         } else {
-          toast.warning("Connecting servers...", {
+          toast.loading("Connecting servers...", {
             id: toastId.current,
             duration: Infinity, // Keep it open until we update it
           });
