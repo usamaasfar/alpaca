@@ -6,13 +6,30 @@ import { Dialog, DialogContent } from "~/renderer/components/ui/dialog";
 import { Kbd, KbdGroup } from "~/renderer/components/ui/kbd";
 import { type server, useServersStore } from "~/renderer/stores/servers";
 
-export function Compose({ onSubmit }: { onSubmit?: (prompt: string, mentions?: string[]) => Promise<any> }) {
+export function Compose({
+  onSubmit,
+  externalOpen,
+  onOpenChange,
+  replyingTo
+}: {
+  onSubmit?: (prompt: string, mentions?: string[]) => Promise<any>;
+  externalOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  replyingTo?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<string[]>([]);
   const [connectedMCPs, setConnectedMCPs] = useState<(server & { connected: boolean })[]>([]);
   const isTabCompletion = useRef(false);
 
   const { getConnectedServers } = useServersStore();
+
+  // Sync external open state
+  useEffect(() => {
+    if (externalOpen !== undefined) {
+      setOpen(externalOpen);
+    }
+  }, [externalOpen]);
 
   useEffect(() => {
     const loadServers = async () => {
@@ -26,6 +43,12 @@ export function Compose({ onSubmit }: { onSubmit?: (prompt: string, mentions?: s
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+        return;
+      }
+
       if (e.key === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setValue([]);
@@ -87,17 +110,29 @@ export function Compose({ onSubmit }: { onSubmit?: (prompt: string, mentions?: s
       }
 
       setOpen(false);
+      onOpenChange?.(false);
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    onOpenChange?.(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-md overflow-visible p-2 rounded-md"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <div className="space-y-2">
+          {replyingTo && (
+            <div className="px-2 py-1.5 border-l-2 border-blue-500 bg-muted/50">
+              <div className="text-xs text-muted-foreground mb-0.5">Replying to</div>
+              <div className="text-sm text-muted-foreground line-clamp-2">{replyingTo}</div>
+            </div>
+          )}
           <Mention.MentionRoot
             value={value}
             onValueChange={(newValue) => setValue([...new Set(newValue)])}

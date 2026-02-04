@@ -305,14 +305,21 @@ export default {
     }
   },
 
-  async reconnectAll() {
+  async reconnectAll(onStatus?: (status: { type: string; namespace?: string; total?: number; connected?: number }) => void) {
     const savedServers = loadConnectedServers();
     const namespaces = Object.keys(savedServers);
 
     console.log(`Reconnecting to ${namespaces.length} saved servers`, namespaces);
 
-    for (const namespace of namespaces) {
+    // Send initial status
+    onStatus?.({ type: "start", total: namespaces.length });
+
+    // Connect to all servers in parallel
+    const connectionPromises = namespaces.map(async (namespace) => {
       try {
+        // Send connecting status
+        onStatus?.({ type: "connecting", namespace });
+
         // Create or reuse auth provider
         let authProvider = authProviders.get(namespace);
         if (!authProvider) {
@@ -321,7 +328,10 @@ export default {
         }
 
         // Skip if no tokens (will need re-auth) - shows disconnected
-        if (!authProvider.tokens()) continue;
+        if (!authProvider.tokens()) {
+          onStatus?.({ type: "skipped", namespace });
+          return { status: "skipped", namespace };
+        }
 
         // Attempt reconnection
         const client = await createMCPClient({ transport: { type: "http", url: getServerUrl(namespace), authProvider } });
@@ -331,12 +341,24 @@ export default {
 
         // Cache tools after reconnection
         await loadAndCacheTools(namespace);
+
+        // Send success status
+        onStatus?.({ type: "connected", namespace });
+        return { status: "connected", namespace };
       } catch (error) {
         console.error(`Failed to reconnect to ${namespace}:`, error);
+        onStatus?.({ type: "error", namespace });
+        return { status: "error", namespace };
       }
-    }
+    });
+
+    // Wait for all connections to complete (parallel)
+    await Promise.allSettled(connectionPromises);
 
     console.log(`Reconnection complete: ${connectionClients.size}/${namespaces.length} servers connected`);
+
+    // Send completion status
+    onStatus?.({ type: "complete", total: namespaces.length, connected: connectionClients.size });
   },
 
   /**

@@ -25,9 +25,10 @@ export interface ElectronAPI {
   listConnectedRemoteServers: () => Promise<Record<string, server & { connected: boolean }>>;
   completeMCPOAuth: (namespace: string, authCode: string) => Promise<MCPConnectionResult>;
   onMCPOAuthCallback: (callback: (data: { code: string; state: string }) => void) => void;
+  onMCPReconnectStatus: (callback: (status: { type: string; namespace?: string; total?: number; connected?: number }) => void) => () => void;
 
   // AI Composer
-  aiCompose: (prompt: string, mentions?: string[]) => void;
+  aiCompose: (prompt: string | null, mentions?: string[], messages?: any[]) => void;
   onAIStep: (callback: (step: any) => void) => void;
   onAIComplete: (callback: (result: any) => void) => void;
   onAIError: (callback: (error: any) => void) => void;

@@ -20,9 +20,14 @@ const electronAPI = {
   onMCPOAuthCallback: (callback: (data: { code: string; state: string }) => void) => {
     ipcRenderer.on("mcp-oauth-callback", (_event, data) => callback(data));
   },
+  onMCPReconnectStatus: (callback: (status: { type: string; namespace?: string; total?: number; connected?: number }) => void) => {
+    const listener = (_event: any, status: any) => callback(status);
+    ipcRenderer.on("mcp-reconnect-status", listener);
+    return () => ipcRenderer.removeListener("mcp-reconnect-status", listener);
+  },
 
   // AI Composer
-  aiCompose: (prompt: string, mentions?: string[]) => ipcRenderer.send("ai-compose", prompt, mentions),
+  aiCompose: (prompt: string | null, mentions?: string[], messages?: any[]) => ipcRenderer.send("ai-compose", prompt, mentions, messages),
   onAIStep: (callback: (step: any) => void) => {
     ipcRenderer.on("ai-step", (_event, step) => callback(step));
   },

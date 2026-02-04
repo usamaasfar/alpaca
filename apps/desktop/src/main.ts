@@ -48,7 +48,9 @@ const createWindow = () => {
 
   // Initialize MCP connections after window is ready
   mainWindow.webContents.once("did-finish-load", async () => {
-    await remote.reconnectAll();
+    await remote.reconnectAll((status) => {
+      mainWindow?.webContents.send("mcp-reconnect-status", status);
+    });
   });
 };
 

@@ -1,31 +1,27 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Toaster } from "sonner";
+import { useKeyboardShortcuts } from "~/renderer/hooks/use-keyboard-shortcuts";
+import { useMCPReconnect } from "~/renderer/hooks/use-mcp-reconnect";
 import ComposerScreen from "~/renderer/screens/composer";
 import SettingsScreen from "~/renderer/screens/settings";
 
 const App = () => {
   const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K: Toggle settings
-      if (e.metaKey && e.key === "k") {
-        e.preventDefault();
-        setShowSettings((prev) => !prev);
-      }
-      // Escape: Close settings
-      if (e.key === "Escape" && showSettings) {
-        e.preventDefault();
-        setShowSettings(false);
-      }
-    };
+  // Handle MCP server reconnection status
+  useMCPReconnect();
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSettings]);
+  // Handle keyboard shortcuts
+  useKeyboardShortcuts({ showSettings, setShowSettings });
 
   return (
     <main className="h-screen w-screen ">
       {showSettings ? <SettingsScreen /> : <ComposerScreen />}
+      <Toaster
+        position="top-center"
+        theme="dark"
+        toastOptions={{ style: { background: "#1f1f1f", border: "1px solid #2f2f2f", color: "#fff" } }}
+      />
     </main>
   );
 };

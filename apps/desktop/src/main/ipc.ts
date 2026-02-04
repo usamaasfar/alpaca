@@ -83,24 +83,14 @@ ipcMain.handle("complete-mcp-oauth", async (_event, namespace: string, authCode:
 });
 
 // AI Composer handler
-ipcMain.on("ai-compose", async (event, prompt: string, mentions?: string[]) => {
+ipcMain.on("ai-compose", async (event, prompt: string | null, mentions?: string[], messages?: any[]) => {
   try {
-    console.log("AI Compose request received");
-    console.log("Prompt:", prompt);
-    console.log("Mentions:", mentions);
-
     // Get MCP tools based on mentions (from cache - instant)
     let mcpTools = {};
 
     if (mentions && mentions.length > 0) {
-      console.log(`Loading tools for mentioned servers: ${mentions.join(", ")}`);
       mcpTools = remote.getToolsFromServers(mentions);
-      console.log(`Loaded ${Object.keys(mcpTools).length} MCP tools`);
-    } else {
-      console.log("No mentions provided - no MCP tools loaded");
     }
-
-    console.log(mentions, mcpTools);
 
     // Create composer agent with MCP tools
     const agent = composer(mcpTools);
@@ -110,16 +100,25 @@ ipcMain.on("ai-compose", async (event, prompt: string, mentions?: string[]) => {
     }
 
     // Generate response with streaming steps
-    const result = await agent.generate({
-      prompt,
-      onStepFinish: (step) => {
-        // Extract text from step content for UI
-        const textContent = step.content?.find((c) => c.type === "text");
-        const stepWithText = { ...step, text: textContent?.text || step.text };
+    // If messages array is provided, use it; otherwise use prompt
+    const onStepFinishHandler = (step: any) => {
+      // Extract text from step content for UI
+      const textContent = step.content?.find((c: any) => c.type === "text");
+      const stepWithText = { ...step, text: textContent?.text || step.text };
 
-        event.reply("ai-step", stepWithText);
-      },
-    });
+      event.reply("ai-step", stepWithText);
+    };
+
+    const result =
+      messages && messages.length > 0
+        ? await agent.generate({
+            messages,
+            onStepFinish: onStepFinishHandler,
+          })
+        : await agent.generate({
+            prompt: prompt!,
+            onStepFinish: onStepFinishHandler,
+          });
 
     event.reply("ai-complete", result);
   } catch (error: any) {
