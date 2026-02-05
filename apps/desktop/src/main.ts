@@ -64,7 +64,7 @@ app.on("open-url", (event, url) => {
   event.preventDefault();
   console.log("OAuth callback received:", url);
 
-  if (url.startsWith("Alpaca.computer://oauth/callback")) {
+  if (url.startsWith("alpaca.computer://oauth/callback")) {
     const urlObj = new URL(url);
     const code = urlObj.searchParams.get("code");
     const state = urlObj.searchParams.get("state") || "";
