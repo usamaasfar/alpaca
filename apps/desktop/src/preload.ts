@@ -18,7 +18,9 @@ const electronAPI = {
   listConnectedRemoteServers: () => ipcRenderer.invoke("list-connected-remote-servers"),
   completeMCPOAuth: (namespace: string, authCode: string) => ipcRenderer.invoke("complete-mcp-oauth", namespace, authCode),
   onMCPOAuthCallback: (callback: (data: { code: string; state: string }) => void) => {
-    ipcRenderer.on("mcp-oauth-callback", (_event, data) => callback(data));
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on("mcp-oauth-callback", listener);
+    return () => ipcRenderer.removeListener("mcp-oauth-callback", listener);
   },
   onMCPReconnectStatus: (callback: (status: { type: string; namespace?: string; total?: number; connected?: number }) => void) => {
     const listener = (_event: any, status: any) => callback(status);

@@ -42,7 +42,8 @@ export const SettingsRemoteServers = () => {
       await completeOAuthFlow(data.code);
     };
 
-    window.electronAPI.onMCPOAuthCallback(handleOAuthCallback);
+    const cleanup = window.electronAPI.onMCPOAuthCallback(handleOAuthCallback);
+    return cleanup;
   }, [completeOAuthFlow]);
 
   return (
