@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
-import { PROVIDERS, type ProviderType } from "~/common/providers";
+import { PROVIDERS } from "~/common/providers";
 import { Button } from "~/renderer/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "~/renderer/components/ui/card";
 import { Field, FieldError } from "~/renderer/components/ui/field";
@@ -31,22 +31,14 @@ export const SettingsProviders = () => {
   const providerSchema = useMemo(() => {
     return z
       .object({
-        selectedProvider: z.string(),
+        selectedProvider: z.enum(["ollama", "openaiCompatible"]),
         modelName: z.string().min(1, "Model name is required"),
         apiKey: z.string().optional(),
         name: z.string().optional(),
         baseUrl: z.string().optional(),
       })
       .superRefine((data, ctx) => {
-        const provider = data.selectedProvider as ProviderType;
-
-        if (provider === "openai" || provider === "anthropic" || provider === "google") {
-          if (!data.apiKey) {
-            ctx.addIssue({ code: "custom", message: "API Key is required", path: ["apiKey"] });
-          }
-        }
-
-        if (provider === "openaiCompatible") {
+        if (data.selectedProvider === "openaiCompatible") {
           if (!data.apiKey) {
             ctx.addIssue({ code: "custom", message: "API Key is required", path: ["apiKey"] });
           }
@@ -65,7 +57,7 @@ export const SettingsProviders = () => {
     defaultValues: { selectedProvider: selectedProvider, modelName: "", apiKey: "", name: "", baseUrl: "" },
   });
 
-  const formSelectedProvider = form.watch("selectedProvider") as ProviderType;
+  const formSelectedProvider = form.watch("selectedProvider");
 
   useEffect(() => {
     getProviders();
@@ -85,25 +77,33 @@ export const SettingsProviders = () => {
 
   useEffect(() => {
     const providerConfig = providers[formSelectedProvider];
+    const isOpenAICompatible = providerConfig?.provider === "openaiCompatible";
     const formData = {
       selectedProvider: formSelectedProvider,
       modelName: providerConfig?.model || "",
-      apiKey: providerConfig?.apiKey || "",
-      name: providerConfig?.name || "",
-      baseUrl: providerConfig?.baseUrl || "",
+      apiKey: isOpenAICompatible ? providerConfig.apiKey : "",
+      name: isOpenAICompatible ? providerConfig.name : "",
+      baseUrl: isOpenAICompatible ? providerConfig.baseUrl : "",
     };
     form.reset(formData);
   }, [formSelectedProvider, providers, form]);
 
   const onSubmit = async (data: z.infer<typeof providerSchema>) => {
-    await setProvider({
-      provider: data.selectedProvider as ProviderType,
-      model: data.modelName,
-      apiKey: data.apiKey,
-      name: data.name,
-      baseUrl: data.baseUrl,
-    });
-    await setSelectedProvider(data.selectedProvider as ProviderType);
+    if (data.selectedProvider === "openaiCompatible") {
+      await setProvider({
+        provider: data.selectedProvider,
+        model: data.modelName,
+        apiKey: data.apiKey || "",
+        name: data.name || "",
+        baseUrl: data.baseUrl || "",
+      });
+    } else {
+      await setProvider({
+        provider: data.selectedProvider,
+        model: data.modelName,
+      });
+    }
+    await setSelectedProvider(data.selectedProvider);
     form.reset(data);
   };
 
@@ -149,36 +149,6 @@ export const SettingsProviders = () => {
               );
             }}
           />
-        );
-
-      case "openai":
-      case "anthropic":
-      case "google":
-        return (
-          <>
-            <Controller
-              name="modelName"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <Label htmlFor={field.name}>Model Name</Label>
-                  <Input {...field} id={field.name} placeholder="e.g., gpt-4o" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-            <Controller
-              name="apiKey"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <Label htmlFor={field.name}>API Key</Label>
-                  <Input {...field} id={field.name} type="password" placeholder="Enter your API key" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-          </>
         );
 
       case "openaiCompatible":
@@ -263,7 +233,7 @@ export const SettingsProviders = () => {
                             <img
                               src={PROVIDERS.find((p) => p.type === field.value)?.logo}
                               alt={PROVIDERS.find((p) => p.type === field.value)?.displayName}
-                              className="w-4 h-4 object-contain grayscale"
+                              className="w-4 h-4 object-contain"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = "none";
@@ -281,7 +251,7 @@ export const SettingsProviders = () => {
                             <img
                               src={provider.logo}
                               alt={provider.displayName}
-                              className="w-4 h-4 object-contain grayscale"
+                              className="w-4 h-4 object-contain"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = "none";

@@ -6,12 +6,6 @@ export interface OllamaProvider {
   model: string;
 }
 
-export interface APIKeyProvider {
-  provider: "openai" | "anthropic" | "google";
-  model: string;
-  apiKey: string;
-}
-
 export interface OpenAICompatibleProvider {
   provider: "openaiCompatible";
   model: string;
@@ -20,7 +14,7 @@ export interface OpenAICompatibleProvider {
   baseUrl: string;
 }
 
-type ProviderConfig = OllamaProvider | APIKeyProvider | OpenAICompatibleProvider;
+type ProviderConfig = OllamaProvider | OpenAICompatibleProvider;
 
 interface ProvidersSettingsStore {
   // State
@@ -40,7 +34,7 @@ interface ProvidersSettingsStore {
   getOllamaModels: () => Promise<void>;
 }
 
-export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set, get) => ({
+export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) => ({
   // Initial state
   isLoading: false,
   selectedProvider: "ollama",
@@ -56,8 +50,9 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set, ge
         if (config) set((state) => ({ providers: { ...state.providers, [providerInfo.type]: JSON.parse(config) } }));
       }
 
-      const selectedProvider = await window.electronAPI.getStorage("selectedProvider");
-      set({ selectedProvider: selectedProvider || "ollama", isLoading: false });
+      const selectedProvider = (await window.electronAPI.getStorage("selectedProvider")) as string | undefined;
+      const validProvider = PROVIDERS.find((provider) => provider.type === selectedProvider)?.type;
+      set({ selectedProvider: validProvider || "ollama", isLoading: false });
     } catch (error) {
       console.error(error);
       set({ isLoading: false });
@@ -68,13 +63,6 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set, ge
     try {
       if (config.provider === "ollama") {
         await window.electronAPI.setSecureStorage(`provider::${config.provider}`, JSON.stringify({ model: config.model }));
-      }
-
-      if (config.provider === "openai" || config.provider === "anthropic" || config.provider === "google") {
-        await window.electronAPI.setSecureStorage(
-          `provider::${config.provider}`,
-          JSON.stringify({ model: config.model, apiKey: config.apiKey }),
-        );
       }
 
       if (config.provider === "openaiCompatible") {

@@ -6,24 +6,6 @@ export const PROVIDERS = [
     logo: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/dark/ollama.png",
   },
   {
-    type: "openai",
-    name: "openai",
-    displayName: "OpenAI",
-    logo: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/dark/openai.png",
-  },
-  {
-    type: "anthropic",
-    name: "anthropic",
-    displayName: "Anthropic",
-    logo: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/dark/claude-color.png",
-  },
-  {
-    type: "google",
-    name: "google",
-    displayName: "Google",
-    logo: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/dark/gemini-color.png",
-  },
-  {
     type: "openaiCompatible",
     name: "openaiCompatible",
     displayName: "OpenAI Compatible",

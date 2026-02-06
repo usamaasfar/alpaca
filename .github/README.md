@@ -7,7 +7,7 @@ Your private AI assistant that actually gets things done. Chat with AI that can 
 ## Features
 
 - **Private & Open Source** - Your data stays on your machine. See every line of code.
-- **Any AI You Want** - Use free local models with [Ollama](https://ollama.ai), or connect to OpenAI, Anthropic, Google, and any other OpenAI-compatible providers.
+- **Any AI You Want** - Use free local models with [Ollama](https://ollama.ai), or connect to any OpenAI-compatible provider.
 - **Thousands of MCP Servers** - Choose from [thousands of MCP servers](https://smithery.ai/servers) for Gmail, Calendar, Notion, Slack, and more — all in one place.
 - **No Clutter** - No history. No threads. Just ask, and you're done.
 
