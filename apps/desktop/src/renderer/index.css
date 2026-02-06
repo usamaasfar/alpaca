@@ -122,3 +122,7 @@
     font-family: "Jost", sans-serif;
   }
 }
+
+.app-drag-region {
+  -webkit-app-region: drag;
+}

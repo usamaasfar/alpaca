@@ -36,7 +36,9 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    titleBarStyle: "hidden",
+    minWidth: 400,
+    minHeight: 300,
+    titleBarStyle: "hiddenInset",
     icon: path.join(__dirname, "../../icons/icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -49,9 +51,6 @@ const createWindow = () => {
   } else {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
-
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
 
   // Initialize MCP connections after window is ready
   mainWindow.webContents.once("did-finish-load", async () => {
