@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/renderer/components/
 
 const SettingsScreen = () => {
   return (
-    <Tabs defaultValue="general" className="w-full h-full pt-8 pb-2.5 px-2.5">
+    <Tabs defaultValue="general" className="w-full h-full overflow-hidden pt-8 pb-2.5 px-2.5">
       <TabsList className="w-full">
         <TabsTrigger value="general">
           <Settings2 />
@@ -27,13 +27,13 @@ const SettingsScreen = () => {
           Presets
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="general" className="h-full">
+      <TabsContent value="general" className="min-h-0">
         <SettingsGeneral />
       </TabsContent>
-      <TabsContent value="providers" className="h-full">
+      <TabsContent value="providers" className="min-h-0">
         <SettingsProviders />
       </TabsContent>
-      <TabsContent value="servers" className="h-full">
+      <TabsContent value="servers" className="min-h-0">
         <SettingsServers />
       </TabsContent>
     </Tabs>

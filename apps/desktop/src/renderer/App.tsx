@@ -15,7 +15,7 @@ const App = () => {
   useKeyboardShortcuts({ showSettings, setShowSettings });
 
   return (
-    <main className="relative h-screen w-screen">
+    <main className="relative h-full w-full overflow-hidden">
       <div className="fixed inset-x-0 top-0 h-8 app-drag-region z-50" aria-hidden="true" />
       {showSettings ? <SettingsScreen /> : <ComposerScreen />}
       <Toaster

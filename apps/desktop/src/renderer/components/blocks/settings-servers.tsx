@@ -3,14 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/renderer/components/
 
 export const SettingsServers = () => {
   return (
-    <Tabs defaultValue="remote" className="h-full">
+    <Tabs defaultValue="remote" className="h-full min-h-0">
       <TabsList className="w-full rounded-b-none">
         <TabsTrigger value="remote">Remote Servers</TabsTrigger>
         <TabsTrigger value="local" disabled>
           Local Servers
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="remote" className="-mt-2 h-full">
+      <TabsContent value="remote" className="-mt-2 min-h-0">
         <SettingsRemoteServers />
       </TabsContent>
     </Tabs>
