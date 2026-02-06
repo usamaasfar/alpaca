@@ -34,7 +34,6 @@ export const SettingsProviders = () => {
         selectedProvider: z.enum(["ollama", "openaiCompatible"]),
         modelName: z.string().min(1, "Model name is required"),
         apiKey: z.string().optional(),
-        name: z.string().optional(),
         baseUrl: z.string().optional(),
       })
       .superRefine((data, ctx) => {
@@ -45,16 +44,13 @@ export const SettingsProviders = () => {
           if (!data.baseUrl) {
             ctx.addIssue({ code: "custom", message: "Base URL is required", path: ["baseUrl"] });
           }
-          if (!data.name) {
-            ctx.addIssue({ code: "custom", message: "Provider name is required", path: ["name"] });
-          }
         }
       });
   }, []);
 
   const form = useForm<z.infer<typeof providerSchema>>({
     resolver: zodResolver(providerSchema),
-    defaultValues: { selectedProvider: selectedProvider, modelName: "", apiKey: "", name: "", baseUrl: "" },
+    defaultValues: { selectedProvider: selectedProvider, modelName: "", apiKey: "", baseUrl: "" },
   });
 
   const formSelectedProvider = form.watch("selectedProvider");
@@ -82,7 +78,6 @@ export const SettingsProviders = () => {
       selectedProvider: formSelectedProvider,
       modelName: providerConfig?.model || "",
       apiKey: isOpenAICompatible ? providerConfig.apiKey : "",
-      name: isOpenAICompatible ? providerConfig.name : "",
       baseUrl: isOpenAICompatible ? providerConfig.baseUrl : "",
     };
     form.reset(formData);
@@ -94,7 +89,6 @@ export const SettingsProviders = () => {
         provider: data.selectedProvider,
         model: data.modelName,
         apiKey: data.apiKey || "",
-        name: data.name || "",
         baseUrl: data.baseUrl || "",
       });
     } else {
@@ -154,17 +148,6 @@ export const SettingsProviders = () => {
       case "openaiCompatible":
         return (
           <>
-            <Controller
-              name="name"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <Label htmlFor={field.name}>Provider Name</Label>
-                  <Input {...field} id={field.name} placeholder="Custom provider name" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
             <Controller
               name="modelName"
               control={form.control}
@@ -233,7 +216,7 @@ export const SettingsProviders = () => {
                             <img
                               src={PROVIDERS.find((p) => p.type === field.value)?.logo}
                               alt={PROVIDERS.find((p) => p.type === field.value)?.displayName}
-                              className="w-4 h-4 object-contain"
+                              className="w-4 h-4 object-contain invert"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = "none";
@@ -251,7 +234,7 @@ export const SettingsProviders = () => {
                             <img
                               src={provider.logo}
                               alt={provider.displayName}
-                              className="w-4 h-4 object-contain"
+                              className="w-4 h-4 object-contain invert"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = "none";

@@ -24,7 +24,6 @@ export const getModel = () => {
   const providerConfig = JSON.parse(providerConfigString) as {
     model: string;
     apiKey?: string;
-    name?: string;
     baseUrl?: string;
   };
 

@@ -10,13 +10,12 @@ export default function openaiCompatibleProvider(model: string) {
   }
 
   const config = JSON.parse(providerConfigString) as {
-    name: string;
     baseUrl: string;
     apiKey: string;
   };
 
   const provider = createOpenAICompatible({
-    name: config.name || "openai-compatible",
+    name: "openai-compatible",
     apiKey: config.apiKey,
     baseURL: config.baseUrl,
     includeUsage: true,

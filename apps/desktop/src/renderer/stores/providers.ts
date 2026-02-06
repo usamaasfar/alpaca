@@ -10,7 +10,6 @@ export interface OpenAICompatibleProvider {
   provider: "openaiCompatible";
   model: string;
   apiKey: string;
-  name: string;
   baseUrl: string;
 }
 
@@ -68,7 +67,7 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
       if (config.provider === "openaiCompatible") {
         await window.electronAPI.setSecureStorage(
           `provider::${config.provider}`,
-          JSON.stringify({ model: config.model, name: config.name, baseUrl: config.baseUrl, apiKey: config.apiKey }),
+          JSON.stringify({ model: config.model, baseUrl: config.baseUrl, apiKey: config.apiKey }),
         );
       }
 
