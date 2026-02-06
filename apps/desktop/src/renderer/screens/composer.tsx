@@ -94,10 +94,8 @@ const Composer = () => {
       {steps.length > 0 && !result && <ComposerToolCalling steps={steps} />}
 
       {result && (
-        <div className="flex flex-col items-center justify-center h-screen p-8">
-          <div className="max-w-2xl w-full">
-            <ComposerResult result={result} />
-          </div>
+        <div className="mt-14 h-[calc(100vh-3.5rem)]">
+          <ComposerResult result={result} />
         </div>
       )}
 
@@ -108,7 +106,7 @@ const Composer = () => {
       )}
 
       {/* Keyboard shortcuts */}
-      {(steps.length === 0 || result) && !isLoading && (
+      {/*{(steps.length === 0 || result) && !isLoading && (
         <div className="flex flex-col gap-2 text-xs absolute bottom-10 left-1/2 -translate-x-1/2">
           {result && (
             <KbdGroup>
@@ -126,7 +124,7 @@ const Composer = () => {
             <Kbd>K</Kbd>
           </KbdGroup>
         </div>
-      )}
+      )}*/}
 
       <Compose
         onSubmit={handleAIResponse}
