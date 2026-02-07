@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
+
 import { useMCPReconnect } from "~/renderer/hooks/use-mcp-reconnect";
 import ComposerScreen from "~/renderer/screens/composer";
 import SettingsScreen from "~/renderer/screens/settings";
@@ -35,8 +36,7 @@ const App = () => {
       {showSettings ? <SettingsScreen /> : <ComposerScreen showSettings={showSettings} />}
       <Toaster
         position="top-center"
-        theme="dark"
-        toastOptions={{ style: { background: "#1f1f1f", border: "1px solid #2f2f2f", color: "#fff" } }}
+        // toastOptions={{ style: { background: "#1f1f1f", border: "1px solid #2f2f2f", color: "#fff" } }}
       />
     </main>
   );
