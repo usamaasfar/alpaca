@@ -83,8 +83,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          VERSION="${{ github.ref_name }}"
+
+          # Detect release type from version tag
+          if [[ "$VERSION" =~ alpha ]]; then
+            # Alpha = draft (manual review needed)
+            DRAFT="--draft"
+            PRERELEASE="--prerelease"
+          elif [[ "$VERSION" =~ beta ]]; then
+            # Beta = auto-publish as pre-release
+            DRAFT=""
+            PRERELEASE="--prerelease"
+          else
+            # Stable = auto-publish as latest
+            DRAFT=""
+            PRERELEASE=""
+          fi
+
           gh release create "${{ github.ref_name }}" \
             release-artifacts/alpaca-macos-zip/**/*.zip \
             --title "Alpaca Desktop ${{ github.ref_name }}" \
             --generate-notes \
-            --draft
+            $DRAFT \
+            $PRERELEASE
