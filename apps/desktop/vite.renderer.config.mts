@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: [/^refractor\/.*/, /^highlight\.js\/.*/, "@babel/runtime/helpers/asyncToGenerator", "@babel/runtime/regenerator"],
+      external: [/^refractor\/.*/, "@babel/runtime/helpers/asyncToGenerator", "@babel/runtime/regenerator"],
     },
   },
 });
