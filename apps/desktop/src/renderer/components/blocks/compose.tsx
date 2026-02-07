@@ -21,6 +21,7 @@ export function Compose({
   const [value, setValue] = useState<string[]>([]);
   const [connectedMCPs, setConnectedMCPs] = useState<(server & { connected: boolean })[]>([]);
   const isTabCompletion = useRef(false);
+  const previousExternalOpen = useRef<boolean | undefined>(externalOpen);
 
   const { getConnectedServers } = useServersStore();
 
@@ -29,14 +30,19 @@ export function Compose({
     if (externalOpen !== undefined) {
       setOpen(externalOpen);
 
-      // When opening fresh (not replying), clear mentions and reload servers
-      if (externalOpen && !replyingTo) {
+      const isOpening = externalOpen && !previousExternalOpen.current;
+
+      // When opening fresh (not replying), clear mentions and reload servers.
+      // Guard by open transition so reply-state changes while already open don't clear mentions.
+      if (isOpening && !replyingTo) {
         setValue([]);
         getConnectedServers().then((servers) => {
           const connectedArray = Object.values(servers).filter((server) => server.connected);
           setConnectedMCPs(connectedArray);
         });
       }
+
+      previousExternalOpen.current = externalOpen;
     }
   }, [externalOpen, replyingTo, getConnectedServers]);
 

@@ -1,6 +1,18 @@
 import { create } from "zustand";
 import { PROVIDERS, type ProviderType } from "~/common/providers";
 
+// Storage types (what we save to disk - no discriminator field)
+interface OllamaStorage {
+  model: string;
+}
+
+interface OpenAICompatibleStorage {
+  model: string;
+  apiKey: string;
+  baseUrl: string;
+}
+
+// Runtime types (what we use in the app - with discriminator for type safety)
 export interface OllamaProvider {
   provider: "ollama";
   model: string;
@@ -19,7 +31,7 @@ interface ProvidersSettingsStore {
   // State
   isLoading: boolean;
   selectedProvider: ProviderType;
-  providers: Record<ProviderType, ProviderConfig>;
+  providers: Partial<Record<ProviderType, ProviderConfig>>;
   // Ollama state
   isOllamaConnected: boolean;
   ollamaModels: string[];
@@ -37,21 +49,24 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
   // Initial state
   isLoading: false,
   selectedProvider: "ollama",
-  providers: {} as Record<ProviderType, ProviderConfig>,
+  providers: {},
   isOllamaConnected: false,
   ollamaModels: [],
 
   getProviders: async () => {
     set({ isLoading: true });
     try {
+      const loadedProviders: Partial<Record<ProviderType, ProviderConfig>> = {};
+
       for (const providerInfo of PROVIDERS) {
-        const config = await window.electronAPI.getSecureStorage(`provider::${providerInfo.type}`);
-        if (config) set((state) => ({ providers: { ...state.providers, [providerInfo.type]: JSON.parse(config) } }));
+        const configJson = await window.electronAPI.getSecureStorage(`provider::${providerInfo.type}`);
+        if (configJson) loadedProviders[providerInfo.type] = deserializeProvider(providerInfo.type, configJson);
       }
 
       const selectedProvider = (await window.electronAPI.getStorage("selectedProvider")) as string | undefined;
       const validProvider = PROVIDERS.find((provider) => provider.type === selectedProvider)?.type;
-      set({ selectedProvider: validProvider || "ollama", isLoading: false });
+
+      set({ providers: loadedProviders, selectedProvider: validProvider || "ollama", isLoading: false });
     } catch (error) {
       console.error(error);
       set({ isLoading: false });
@@ -60,17 +75,8 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
 
   setProvider: async (config) => {
     try {
-      if (config.provider === "ollama") {
-        await window.electronAPI.setSecureStorage(`provider::${config.provider}`, JSON.stringify({ model: config.model }));
-      }
-
-      if (config.provider === "openaiCompatible") {
-        await window.electronAPI.setSecureStorage(
-          `provider::${config.provider}`,
-          JSON.stringify({ model: config.model, baseUrl: config.baseUrl, apiKey: config.apiKey }),
-        );
-      }
-
+      const serialized = serializeProvider(config);
+      await window.electronAPI.setSecureStorage(`provider::${config.provider}`, serialized);
       set((state) => ({ providers: { ...state.providers, [config.provider]: config } }));
     } catch (error) {
       console.error(error);
@@ -108,3 +114,42 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
     }
   },
 }));
+
+// Serialization: Convert runtime config to storage format
+function serializeProvider(config: ProviderConfig): string {
+  switch (config.provider) {
+    case "ollama": {
+      const storage: OllamaStorage = { model: config.model };
+      return JSON.stringify(storage);
+    }
+    case "openaiCompatible": {
+      const storage: OpenAICompatibleStorage = {
+        model: config.model,
+        baseUrl: config.baseUrl,
+        apiKey: config.apiKey,
+      };
+      return JSON.stringify(storage);
+    }
+  }
+}
+
+// Deserialization: Convert storage format to runtime config
+function deserializeProvider(type: ProviderType, json: string): ProviderConfig {
+  const parsed = JSON.parse(json);
+
+  switch (type) {
+    case "ollama": {
+      const provider: OllamaProvider = { provider: "ollama", model: parsed.model };
+      return provider;
+    }
+    case "openaiCompatible": {
+      const provider: OpenAICompatibleProvider = {
+        provider: "openaiCompatible",
+        model: parsed.model,
+        apiKey: parsed.apiKey,
+        baseUrl: parsed.baseUrl,
+      };
+      return provider;
+    }
+  }
+}

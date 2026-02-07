@@ -1,13 +1,6 @@
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/renderer/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from "~/renderer/components/ui/alert-dialog";
 import { Kbd, KbdGroup } from "~/renderer/components/ui/kbd";
 import { useGeneralSettingsStore } from "~/renderer/stores/general";
 
