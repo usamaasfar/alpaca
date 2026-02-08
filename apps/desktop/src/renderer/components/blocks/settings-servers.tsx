@@ -1,7 +1,14 @@
-import { SettingsRemoteServers } from "~/renderer/components/blocks/settings-servers-remote";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/renderer/components/ui/tabs";
+import { memo } from "react";
 
-export const SettingsServers = () => {
+import { SettingsRemoteServers } from "~/renderer/components/blocks/settings-servers-remote";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "~/renderer/components/ui/tabs";
+
+export const SettingsServers = memo(() => {
   return (
     <Tabs defaultValue="remote" className="h-full min-h-0">
       <TabsList className="w-full rounded-b-none">
@@ -15,4 +22,4 @@ export const SettingsServers = () => {
       </TabsContent>
     </Tabs>
   );
-};
+});

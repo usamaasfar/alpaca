@@ -1,20 +1,31 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { PROVIDERS } from "~/common/providers";
 import { Button } from "~/renderer/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader } from "~/renderer/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "~/renderer/components/ui/card";
 import { Field, FieldError } from "~/renderer/components/ui/field";
 import { Input } from "~/renderer/components/ui/input";
 import { Label } from "~/renderer/components/ui/label";
 import { ScrollArea } from "~/renderer/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/renderer/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/renderer/components/ui/select";
 import { useProvidersSettingsStore } from "~/renderer/stores/providers";
 
-export const SettingsProviders = () => {
+export const SettingsProviders = memo(() => {
   const {
     selectedProvider,
     providers,
@@ -39,10 +50,18 @@ export const SettingsProviders = () => {
       .superRefine((data, ctx) => {
         if (data.selectedProvider === "openaiCompatible") {
           if (!data.apiKey) {
-            ctx.addIssue({ code: "custom", message: "API Key is required", path: ["apiKey"] });
+            ctx.addIssue({
+              code: "custom",
+              message: "API Key is required",
+              path: ["apiKey"],
+            });
           }
           if (!data.baseUrl) {
-            ctx.addIssue({ code: "custom", message: "Base URL is required", path: ["baseUrl"] });
+            ctx.addIssue({
+              code: "custom",
+              message: "Base URL is required",
+              path: ["baseUrl"],
+            });
           }
         }
       });
@@ -50,7 +69,12 @@ export const SettingsProviders = () => {
 
   const form = useForm<z.infer<typeof providerSchema>>({
     resolver: zodResolver(providerSchema),
-    defaultValues: { selectedProvider: selectedProvider, modelName: "", apiKey: "", baseUrl: "" },
+    defaultValues: {
+      selectedProvider: selectedProvider,
+      modelName: "",
+      apiKey: "",
+      baseUrl: "",
+    },
   });
 
   const formSelectedProvider = form.watch("selectedProvider");
@@ -64,12 +88,14 @@ export const SettingsProviders = () => {
   }, [getOllamaHealth]);
 
   useEffect(() => {
-    if (formSelectedProvider === "ollama" && isOllamaConnected) getOllamaModels();
+    if (formSelectedProvider === "ollama" && isOllamaConnected)
+      getOllamaModels();
   }, [formSelectedProvider, isOllamaConnected, getOllamaModels]);
 
   useEffect(() => {
     if (selectedProvider) form.setValue("selectedProvider", selectedProvider);
-  }, [selectedProvider, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProvider]);
 
   useEffect(() => {
     const providerConfig = providers[formSelectedProvider];
@@ -81,7 +107,8 @@ export const SettingsProviders = () => {
       baseUrl: isOpenAICompatible ? providerConfig.baseUrl : "",
     };
     form.reset(formData);
-  }, [formSelectedProvider, providers, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formSelectedProvider, providers]);
 
   const onSubmit = async (data: z.infer<typeof providerSchema>) => {
     if (data.selectedProvider === "openaiCompatible") {
@@ -115,7 +142,10 @@ export const SettingsProviders = () => {
             control={form.control}
             render={({ field, fieldState }) => {
               const ollamaError = !isOllamaConnected
-                ? { message: "Can't connect to Ollama. Install from https://ollama.com or start Ollama if already installed." }
+                ? {
+                    message:
+                      "Can't connect to Ollama. Install from https://ollama.com or start Ollama if already installed.",
+                  }
                 : ollamaModels.length === 0
                   ? { message: "No models found. Run: ollama pull llama3.2" }
                   : null;
@@ -125,7 +155,11 @@ export const SettingsProviders = () => {
               return (
                 <Field data-invalid={hasError}>
                   <Label htmlFor={field.name}>Model Name</Label>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={!isOllamaConnected || ollamaModels.length === 0}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={!isOllamaConnected || ollamaModels.length === 0}
+                  >
                     <SelectTrigger aria-invalid={!!hasError}>
                       <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
@@ -137,7 +171,9 @@ export const SettingsProviders = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                   {ollamaError && <FieldError errors={[ollamaError]} />}
                 </Field>
               );
@@ -154,8 +190,15 @@ export const SettingsProviders = () => {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <Label htmlFor={field.name}>Model Name</Label>
-                  <Input {...field} id={field.name} placeholder="e.g., llama-3.1-70b" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  <Input
+                    {...field}
+                    id={field.name}
+                    placeholder="e.g., llama-3.1-70b"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -165,8 +208,15 @@ export const SettingsProviders = () => {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <Label htmlFor={field.name}>Base URL</Label>
-                  <Input {...field} id={field.name} placeholder="https://api.example.com/v1" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  <Input
+                    {...field}
+                    id={field.name}
+                    placeholder="https://api.example.com/v1"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -176,8 +226,16 @@ export const SettingsProviders = () => {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <Label htmlFor={field.name}>API Key</Label>
-                  <Input {...field} id={field.name} type="password" placeholder="Enter your API key" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="password"
+                    placeholder="Enter your API key"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -197,7 +255,9 @@ export const SettingsProviders = () => {
         </div>
       )}
       <CardHeader className="shrink-0">
-        <CardDescription>Configure your AI provider and model settings</CardDescription>
+        <CardDescription>
+          Configure your AI provider and model settings
+        </CardDescription>
       </CardHeader>
       <ScrollArea className="flex-1 h-0">
         <CardContent className="pb-6">
@@ -207,22 +267,36 @@ export const SettingsProviders = () => {
               control={form.control}
               render={({ field }) => (
                 <Field>
-                  <Label htmlFor={field.name}>{field.value === selectedProvider ? "Selected" : "Select"} Provider</Label>
+                  <Label htmlFor={field.name}>
+                    {field.value === selectedProvider ? "Selected" : "Select"}{" "}
+                    Provider
+                  </Label>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a provider">
                         {field.value && (
                           <div className="flex items-center space-x-2">
                             <img
-                              src={PROVIDERS.find((p) => p.type === field.value)?.logo}
-                              alt={PROVIDERS.find((p) => p.type === field.value)?.displayName}
+                              src={
+                                PROVIDERS.find((p) => p.type === field.value)
+                                  ?.logo
+                              }
+                              alt={
+                                PROVIDERS.find((p) => p.type === field.value)
+                                  ?.displayName
+                              }
                               className="w-4 h-4 object-contain invert"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = "none";
                               }}
                             />
-                            <span>{PROVIDERS.find((p) => p.type === field.value)?.displayName}</span>
+                            <span>
+                              {
+                                PROVIDERS.find((p) => p.type === field.value)
+                                  ?.displayName
+                              }
+                            </span>
                           </div>
                         )}
                       </SelectValue>
@@ -252,7 +326,11 @@ export const SettingsProviders = () => {
 
             {renderProviderFields()}
 
-            <Button type="submit" className="w-full" disabled={!shouldEnableButton || form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!shouldEnableButton || form.formState.isSubmitting}
+            >
               Select
             </Button>
           </form>
@@ -260,4 +338,4 @@ export const SettingsProviders = () => {
       </ScrollArea>
     </Card>
   );
-};
+});
