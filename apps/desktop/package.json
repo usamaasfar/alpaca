@@ -7,7 +7,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/usamaasfar/integral"
+    "url": "https://github.com/usamaasfar/alpaca"
   },
   "scripts": {
     "dev": "electron-forge start",

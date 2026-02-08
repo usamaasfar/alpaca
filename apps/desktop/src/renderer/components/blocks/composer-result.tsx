@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+
 import { ScrollArea } from "~/renderer/components/ui/scroll-area";
 
 export const ComposerResult = ({ result, footer }: { result: string; footer?: ReactNode }) => {
@@ -16,7 +16,7 @@ export const ComposerResult = ({ result, footer }: { result: string; footer?: Re
           <div className="prose prose-neutral dark:prose-invert max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex, rehypeHighlight]}
+              rehypePlugins={[rehypeKatex]}
               components={{
                 code({ node, inline, className, children, ...props }: any) {
                   return !inline ? (
