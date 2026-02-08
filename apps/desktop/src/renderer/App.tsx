@@ -34,10 +34,7 @@ const App = () => {
     <main className="relative h-full w-full overflow-hidden">
       <div className="fixed inset-x-0 top-0 h-8 app-drag-region z-50" aria-hidden="true" />
       {showSettings ? <SettingsScreen /> : <ComposerScreen showSettings={showSettings} />}
-      <Toaster
-        position="bottom-right"
-        // toastOptions={{ style: { background: "#1f1f1f", border: "1px solid #2f2f2f", color: "#fff" } }}
-      />
+      <Toaster position="top-right" />
     </main>
   );
 };
