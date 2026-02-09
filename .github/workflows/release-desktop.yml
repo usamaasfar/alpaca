@@ -18,7 +18,6 @@ jobs:
   build-macos:
     name: Build macOS App
     runs-on: macos-latest
-    timeout-minutes: 60
 
     steps:
       - name: Checkout code
