@@ -12,11 +12,20 @@ const config: ForgeConfig = {
     asar: true,
     icon: "./icons/icon",
     appBundleId: "com.alpaca.desktop",
-    // Code signing for macOS - uses @electron/osx-sign defaults
-    osxSign: process.env.APPLE_ID ? { optionsForFile: () => ({ entitlements: "./entitlements.plist" }) } : {},
-    // Notarization for macOS - required for distribution outside Mac App Store
+    osxSign: process.env.APPLE_ID
+      ? {
+          optionsForFile: () => ({
+            entitlements: "./entitlements.plist",
+            entitlementsInherit: "./entitlements.plist",
+          }),
+        }
+      : undefined,
     osxNotarize: process.env.APPLE_ID
-      ? { appleId: process.env.APPLE_ID, appleIdPassword: process.env.APPLE_ID_PASSWORD, teamId: process.env.APPLE_TEAM_ID }
+      ? {
+          appleId: process.env.APPLE_ID!,
+          appleIdPassword: process.env.APPLE_ID_PASSWORD!,
+          teamId: process.env.APPLE_TEAM_ID!,
+        }
       : undefined,
   },
   rebuildConfig: {},
