@@ -78,14 +78,18 @@ jobs:
           rm $RUNNER_TEMP/certificate.p12
 
       - name: Build desktop app
-        working-directory: apps/desktop
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 120
+          max_attempts: 5
+          retry_wait_seconds: 30
+          command: cd apps/desktop && npm run make
         env:
           SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           DEBUG: "electron-notarize*,electron-osx-sign*"
-        run: npm run make
 
       - name: List build artifacts
         working-directory: apps/desktop
