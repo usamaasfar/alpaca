@@ -7,21 +7,12 @@ import smitheryService from "~/main/services/smithery";
 import storage from "~/main/utils/storage";
 
 ipcMain.handle("set-storage", (_event, key: string, value: any) => {
-  storage.store.set(key, value);
+  storage.set(key, value);
   return true;
 });
 
 ipcMain.handle("get-storage", (_event, key: string) => {
-  return storage.store.get(key);
-});
-
-ipcMain.handle("set-secure-storage", (_event, key: string, value: any) => {
-  storage.secureStore.set(key, value);
-  return true;
-});
-
-ipcMain.handle("get-secure-storage", (_event, key: string) => {
-  return storage.secureStore.get(key);
+  return storage.get(key);
 });
 
 ipcMain.handle("get-ollama-health", async () => {

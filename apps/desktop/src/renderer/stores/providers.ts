@@ -59,7 +59,7 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
       const loadedProviders: Partial<Record<ProviderType, ProviderConfig>> = {};
 
       for (const providerInfo of PROVIDERS) {
-        const configJson = await window.electronAPI.getSecureStorage(`provider::${providerInfo.type}`);
+        const configJson = await window.electronAPI.getStorage(`provider::${providerInfo.type}`);
         if (configJson) loadedProviders[providerInfo.type] = deserializeProvider(providerInfo.type, configJson);
       }
 
@@ -76,7 +76,7 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
   setProvider: async (config) => {
     try {
       const serialized = serializeProvider(config);
-      await window.electronAPI.setSecureStorage(`provider::${config.provider}`, serialized);
+      await window.electronAPI.setStorage(`provider::${config.provider}`, serialized);
       set((state) => ({ providers: { ...state.providers, [config.provider]: config } }));
     } catch (error) {
       console.error(error);

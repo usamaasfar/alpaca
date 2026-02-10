@@ -11,8 +11,6 @@ export interface ElectronAPI {
   // Storage
   setStorage: (key: string, value: any) => Promise<boolean>;
   getStorage: (key: string) => Promise<any>;
-  setSecureStorage: (key: string, value: string) => Promise<boolean>;
-  getSecureStorage: (key: string) => Promise<string>;
 
   // Providers
   getOllamaHealth: () => Promise<boolean>;

@@ -4,8 +4,6 @@ const electronAPI = {
   // Storage
   setStorage: (key: string, value: any) => ipcRenderer.invoke("set-storage", key, value),
   getStorage: (key: string) => ipcRenderer.invoke("get-storage", key),
-  setSecureStorage: (key: string, value: any) => ipcRenderer.invoke("set-secure-storage", key, value),
-  getSecureStorage: (key: string) => ipcRenderer.invoke("get-secure-storage", key),
 
   // Providers
   getOllamaHealth: () => ipcRenderer.invoke("get-ollama-health"),

@@ -3,6 +3,7 @@ import { config } from "dotenv";
 import { app, BrowserWindow } from "electron";
 import started from "electron-squirrel-startup";
 import Store from "electron-store";
+import { UpdateSourceType, updateElectronApp } from "update-electron-app";
 
 // Load environment variables from .env file
 config();
@@ -16,6 +17,19 @@ Store.initRenderer();
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
+}
+
+// Initialize auto-updater (only in production)
+if (!app.isPackaged) {
+  console.log("Skipping auto-updater in development mode");
+} else {
+  updateElectronApp({
+    updateSource: { type: UpdateSourceType.ElectronPublicUpdateService, repo: "usamaasfar/alpaca" },
+    updateInterval: "1 hour",
+    notifyUser: true,
+  });
+
+  console.log("Auto-updater initialized");
 }
 
 if (process.platform === "win32") app.setAppUserModelId("com.alpaca.desktop");

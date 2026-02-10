@@ -4,8 +4,8 @@ import dayjs from "dayjs";
 import storage from "~/main/utils/storage";
 
 const getComposerPrompt = () => {
-  const username = storage.store.get("username", "User");
-  const customInstructions = storage.store.get("customInstructions", "");
+  const username = storage.get("username", "User");
+  const customInstructions = storage.get("customInstructions", "");
 
   return stripIndents`
     Role:

@@ -12,6 +12,21 @@ const config: ForgeConfig = {
     asar: true,
     icon: "./icons/icon",
     appBundleId: "com.alpaca.desktop",
+    osxSign: process.env.APPLE_ID
+      ? {
+          optionsForFile: () => ({
+            entitlements: "./entitlements.plist",
+            entitlementsInherit: "./entitlements.plist",
+          }),
+        }
+      : undefined,
+    osxNotarize: process.env.APPLE_ID
+      ? {
+          appleId: process.env.APPLE_ID!,
+          appleIdPassword: process.env.APPLE_ID_PASSWORD!,
+          teamId: process.env.APPLE_TEAM_ID!,
+        }
+      : undefined,
   },
   rebuildConfig: {},
   makers: [

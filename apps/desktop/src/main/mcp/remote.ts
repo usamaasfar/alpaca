@@ -22,9 +22,9 @@ export class OAuthClientProvider {
 
   private loadTokens() {
     try {
-      const saved = storage.secureStore.get(this.storageKey);
+      const saved = storage.get(this.storageKey);
       if (saved) {
-        const data = JSON.parse(saved);
+        const data = JSON.parse(saved as string);
         this._tokens = data.tokens;
         this._clientInfo = data.clientInfo;
         console.log(`Loaded saved tokens for ${this.serverName}`);
@@ -37,7 +37,7 @@ export class OAuthClientProvider {
   private saveTokensToStorage() {
     try {
       const data = { tokens: this._tokens, clientInfo: this._clientInfo, updatedAt: new Date().toISOString() };
-      storage.secureStore.set(this.storageKey, JSON.stringify(data));
+      storage.set(this.storageKey, JSON.stringify(data));
       console.log(`Saved tokens for ${this.serverName}`);
     } catch (error) {
       console.error(`Failed to save tokens for ${this.serverName}:`, error);
@@ -109,7 +109,7 @@ export class OAuthClientProvider {
     this._codeVerifier = undefined;
     this._authInProgress = false;
     try {
-      storage.secureStore.delete(this.storageKey);
+      storage.delete(this.storageKey);
     } catch (error) {
       console.error(`Failed to delete tokens for ${this.serverName}:`, error);
     }
@@ -125,26 +125,26 @@ function getServerUrl(namespace: string): string {
 }
 
 function saveConnectedServers(server: server) {
-  const storedServers = storage.store.get("remote-connected-servers") as Record<string, server> | undefined;
+  const storedServers = storage.get("remote-connected-servers") as Record<string, server> | undefined;
   if (storedServers) {
     const servers = { ...storedServers, [server.namespace]: server };
-    storage.store.set("remote-connected-servers", servers as any);
+    storage.set("remote-connected-servers", servers as any);
   } else {
-    storage.store.set("remote-connected-servers", { [server.namespace]: server } as any);
+    storage.set("remote-connected-servers", { [server.namespace]: server } as any);
   }
 }
 
 function removeConnectedServer(namespace: string) {
-  const storedServers = storage.store.get("remote-connected-servers") as Record<string, server> | undefined;
+  const storedServers = storage.get("remote-connected-servers") as Record<string, server> | undefined;
   if (storedServers) {
     const servers = { ...storedServers };
     delete servers[namespace];
-    storage.store.set("remote-connected-servers", servers as any);
+    storage.set("remote-connected-servers", servers as any);
   }
 }
 
 function loadConnectedServers(): Record<string, server> {
-  return storage.store.get("remote-connected-servers", {}) as Record<string, server>;
+  return storage.get("remote-connected-servers", {}) as Record<string, server>;
 }
 
 /**

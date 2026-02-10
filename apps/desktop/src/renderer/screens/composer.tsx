@@ -1,4 +1,4 @@
-import { FlaskConical, Sparkle } from "lucide-react";
+import { Sparkle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Compose } from "~/renderer/components/blocks/compose";
 import { ComposerResult } from "~/renderer/components/blocks/composer-result";
@@ -119,13 +119,6 @@ const Composer = ({ showSettings }: ComposerProps) => {
 
       {steps.length === 0 && !result && !isLoading && (
         <div className="h-full flex flex-col items-center justify-center">
-          <div className="absolute right-3 bottom-3">
-            <Badge variant="secondary">
-              <FlaskConical data-icon="inline-start" className="" />
-              Beta
-            </Badge>
-          </div>
-
           <Greetings />
         </div>
       )}

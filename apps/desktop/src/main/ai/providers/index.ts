@@ -8,20 +8,20 @@ const providers = {
 };
 
 export const getModel = () => {
-  const selectedProvider = storage.store.get("selectedProvider", "ollama") as string;
+  const selectedProvider = storage.get("selectedProvider", "ollama") as string;
   const provider = providers[selectedProvider as keyof typeof providers];
 
   if (!provider) {
     throw new Error(`Provider '${selectedProvider}' is not supported`);
   }
 
-  const providerConfigString = storage.secureStore.get(`provider::${selectedProvider}`);
+  const providerConfigString = storage.get(`provider::${selectedProvider}`);
 
   if (!providerConfigString) {
     throw new Error(`Provider config for '${selectedProvider}' is not configured`);
   }
 
-  const providerConfig = JSON.parse(providerConfigString) as {
+  const providerConfig = JSON.parse(providerConfigString as string) as {
     model: string;
     apiKey?: string;
     baseUrl?: string;
