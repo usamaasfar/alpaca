@@ -163,7 +163,8 @@ export default {
       console.log(`Connecting to ${server.namespace}`);
       let authProvider = authProviders.get(server.namespace);
       if (!authProvider) {
-        authProvider = new OAuthClientProvider(server.namespace);
+        const stored = loadServer(server.namespace);
+        authProvider = new OAuthClientProvider(server.namespace, stored?.tokens, stored?.clientInfo);
         authProviders.set(server.namespace, authProvider);
       }
 
