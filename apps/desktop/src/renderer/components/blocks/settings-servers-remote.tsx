@@ -165,7 +165,7 @@ const SearchServers = () => {
               </Avatar>
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <p>{server.displayName}</p>
-                {connectedServers[server.namespace] && <Badge className="gap-1 bg-blue-600">Installed</Badge>}
+                {connectedServers?.[server.namespace] && <Badge className="gap-1 bg-blue-600">Installed</Badge>}
                 {server.verified && (
                   <Badge className="gap-1 bg-green-600">
                     <BadgeCheck className="h-3 w-3" />
@@ -235,7 +235,7 @@ const SearchServers = () => {
                 </Button>
               </DialogClose>
 
-              {connectedServers[server.namespace] && connectedServers[server.namespace].connected ? (
+              {connectedServers?.[server.namespace]?.connected ? (
                 <Button
                   variant="destructive"
                   className="flex-1"
