@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -65,8 +65,6 @@ export const SettingsProviders = memo(() => {
       baseUrl: "",
     },
   });
-  const formRef = useRef(form);
-  formRef.current = form;
 
   const formSelectedProvider = form.watch("selectedProvider");
 
@@ -83,8 +81,8 @@ export const SettingsProviders = memo(() => {
   }, [formSelectedProvider, isOllamaConnected, getOllamaModels]);
 
   useEffect(() => {
-    if (selectedProvider) formRef.current.setValue("selectedProvider", selectedProvider);
-  }, [selectedProvider]);
+    if (selectedProvider) form.setValue("selectedProvider", selectedProvider);
+  }, [selectedProvider, form]);
 
   useEffect(() => {
     const providerConfig = providers[formSelectedProvider];
@@ -95,8 +93,8 @@ export const SettingsProviders = memo(() => {
       apiKey: isOpenAICompatible ? providerConfig.apiKey : "",
       baseUrl: isOpenAICompatible ? providerConfig.baseUrl : "",
     };
-    formRef.current.reset(formData);
-  }, [formSelectedProvider, providers]);
+    form.reset(formData);
+  }, [formSelectedProvider, providers, form]);
 
   const onSubmit = async (data: z.infer<typeof providerSchema>) => {
     if (data.selectedProvider === "openaiCompatible") {

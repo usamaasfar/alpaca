@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BadgeCheck, CircleCheck, CircleX, ExternalLink, Info, LoaderCircle, Search, Server, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 
@@ -31,17 +31,15 @@ export const SettingsRemoteServers = () => {
     resolver: zodResolver(formSchema),
     defaultValues: { term: "" },
   });
-  const formRef = useRef(form);
-  formRef.current = form;
 
   const term = useWatch({ control: form.control, name: "term" });
 
   useEffect(() => {
-    const subscription = formRef.current.watch((value) => {
+    const subscription = form.watch((value) => {
       if (value.term) searchServers(value.term);
     });
     return () => subscription.unsubscribe();
-  }, [searchServers]);
+  }, [searchServers, form]);
 
   useEffect(() => {
     const handleOAuthCallback = async (data: { code: string; state: string }) => {
