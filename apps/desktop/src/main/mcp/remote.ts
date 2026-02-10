@@ -46,34 +46,6 @@ function removeServer(namespace: string) {
   storage.set(SERVERS_INDEX_KEY, index.filter((n) => n !== namespace));
 }
 
-// --- Legacy migration (one-time) ---
-
-function migrateFromLegacyStorage() {
-  const oldServers = storage.get("remote-connected-servers") as Record<string, any> | undefined;
-  if (!oldServers) return;
-
-  for (const [namespace, serverData] of Object.entries(oldServers)) {
-    const oldTokenKey = `mcp-${namespace.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-auth`;
-    let authData: Record<string, any> = {};
-
-    try {
-      const saved = storage.get(oldTokenKey);
-      if (saved) {
-        const parsed = JSON.parse(saved as string);
-        authData = { tokens: parsed.tokens, clientInfo: parsed.clientInfo, updatedAt: parsed.updatedAt };
-      }
-    } catch {}
-
-    saveServer(namespace, { ...serverData, ...authData });
-    storage.delete(oldTokenKey);
-  }
-
-  storage.delete("remote-connected-servers");
-  console.log("Migrated legacy server storage to new format");
-}
-
-migrateFromLegacyStorage();
-
 // --- OAuth client provider ---
 
 export class OAuthClientProvider {
