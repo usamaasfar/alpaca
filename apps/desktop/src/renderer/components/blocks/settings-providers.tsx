@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -14,7 +14,7 @@ import { ScrollArea } from "~/renderer/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/renderer/components/ui/select";
 import { useProvidersSettingsStore } from "~/renderer/stores/providers";
 
-export const SettingsProviders = () => {
+export const SettingsProviders = memo(() => {
   const {
     selectedProvider,
     providers,
@@ -39,10 +39,18 @@ export const SettingsProviders = () => {
       .superRefine((data, ctx) => {
         if (data.selectedProvider === "openaiCompatible") {
           if (!data.apiKey) {
-            ctx.addIssue({ code: "custom", message: "API Key is required", path: ["apiKey"] });
+            ctx.addIssue({
+              code: "custom",
+              message: "API Key is required",
+              path: ["apiKey"],
+            });
           }
           if (!data.baseUrl) {
-            ctx.addIssue({ code: "custom", message: "Base URL is required", path: ["baseUrl"] });
+            ctx.addIssue({
+              code: "custom",
+              message: "Base URL is required",
+              path: ["baseUrl"],
+            });
           }
         }
       });
@@ -50,7 +58,12 @@ export const SettingsProviders = () => {
 
   const form = useForm<z.infer<typeof providerSchema>>({
     resolver: zodResolver(providerSchema),
-    defaultValues: { selectedProvider: selectedProvider, modelName: "", apiKey: "", baseUrl: "" },
+    defaultValues: {
+      selectedProvider: selectedProvider,
+      modelName: "",
+      apiKey: "",
+      baseUrl: "",
+    },
   });
 
   const formSelectedProvider = form.watch("selectedProvider");
@@ -115,7 +128,9 @@ export const SettingsProviders = () => {
             control={form.control}
             render={({ field, fieldState }) => {
               const ollamaError = !isOllamaConnected
-                ? { message: "Can't connect to Ollama. Install from https://ollama.com or start Ollama if already installed." }
+                ? {
+                    message: "Can't connect to Ollama. Install from https://ollama.com or start Ollama if already installed.",
+                  }
                 : ollamaModels.length === 0
                   ? { message: "No models found. Run: ollama pull llama3.2" }
                   : null;
@@ -260,4 +275,4 @@ export const SettingsProviders = () => {
       </ScrollArea>
     </Card>
   );
-};
+});
