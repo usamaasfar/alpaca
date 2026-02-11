@@ -12,6 +12,11 @@ interface OpenAICompatibleStorage {
   baseUrl: string;
 }
 
+interface ApiKeyProviderStorage {
+  model: string;
+  apiKey: string;
+}
+
 // Runtime types (what we use in the app - with discriminator for type safety)
 export interface OllamaProvider {
   provider: "ollama";
@@ -25,7 +30,25 @@ export interface OpenAICompatibleProvider {
   baseUrl: string;
 }
 
-type ProviderConfig = OllamaProvider | OpenAICompatibleProvider;
+export interface OpenAIProvider {
+  provider: "openai";
+  model: string;
+  apiKey: string;
+}
+
+export interface AnthropicProvider {
+  provider: "anthropic";
+  model: string;
+  apiKey: string;
+}
+
+export interface GoogleProvider {
+  provider: "google";
+  model: string;
+  apiKey: string;
+}
+
+type ProviderConfig = OllamaProvider | OpenAICompatibleProvider | OpenAIProvider | AnthropicProvider | GoogleProvider;
 
 interface ProvidersSettingsStore {
   // State
@@ -130,6 +153,15 @@ function serializeProvider(config: ProviderConfig): string {
       };
       return JSON.stringify(storage);
     }
+    case "openai":
+    case "anthropic":
+    case "google": {
+      const storage: ApiKeyProviderStorage = {
+        model: config.model,
+        apiKey: config.apiKey,
+      };
+      return JSON.stringify(storage);
+    }
   }
 }
 
@@ -148,6 +180,30 @@ function deserializeProvider(type: ProviderType, json: string): ProviderConfig {
         model: parsed.model,
         apiKey: parsed.apiKey,
         baseUrl: parsed.baseUrl,
+      };
+      return provider;
+    }
+    case "openai": {
+      const provider: OpenAIProvider = {
+        provider: "openai",
+        model: parsed.model,
+        apiKey: parsed.apiKey,
+      };
+      return provider;
+    }
+    case "anthropic": {
+      const provider: AnthropicProvider = {
+        provider: "anthropic",
+        model: parsed.model,
+        apiKey: parsed.apiKey,
+      };
+      return provider;
+    }
+    case "google": {
+      const provider: GoogleProvider = {
+        provider: "google",
+        model: parsed.model,
+        apiKey: parsed.apiKey,
       };
       return provider;
     }
