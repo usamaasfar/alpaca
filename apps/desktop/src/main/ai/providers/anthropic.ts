@@ -1,4 +1,4 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createAnthropic } from "@ai-sdk/anthropic";
 
 import storage from "~/main/utils/storage";
 
@@ -13,11 +13,8 @@ export default function anthropicProvider(model: string) {
     apiKey: string;
   };
 
-  const provider = createOpenAICompatible({
-    name: "anthropic",
+  const provider = createAnthropic({
     apiKey: config.apiKey,
-    baseURL: "https://api.anthropic.com/v1",
-    includeUsage: true,
   });
 
   return provider(model);
