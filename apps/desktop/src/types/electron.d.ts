@@ -12,9 +12,6 @@ export interface ElectronAPI {
   setStorage: (key: string, value: any) => Promise<boolean>;
   getStorage: (key: string) => Promise<any>;
 
-  // Providers
-  getOllamaHealth: () => Promise<boolean>;
-  getOllamaModels: () => Promise<string[]>;
 
   // MCP Remote Servers
   searchRemoteMCPServers: (term: string) => Promise<serverSearchResult[]>;
