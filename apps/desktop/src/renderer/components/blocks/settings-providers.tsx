@@ -21,7 +21,7 @@ import {
   useProvidersSettingsStore,
 } from "~/renderer/stores/providers";
 
-const PROVIDER_TYPES = ["ollama", "openaiCompatible", "openai", "anthropic", "google"] as const;
+const PROVIDER_TYPES = PROVIDERS.map(p => p.type) as readonly [ProviderType, ...ProviderType[]];
 
 const PROVIDER_LOOKUP = Object.fromEntries(PROVIDERS.map((provider) => [provider.type, provider])) as Record<
   ProviderType,
