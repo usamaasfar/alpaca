@@ -2,7 +2,6 @@ import { ipcMain, shell } from "electron";
 
 import composer from "~/main/ai/agents/composer";
 import remote from "~/main/mcp/remote";
-import ollama from "~/main/services/ollama";
 import smitheryService from "~/main/services/smithery";
 import storage from "~/main/utils/storage";
 
@@ -15,13 +14,6 @@ ipcMain.handle("get-storage", (_event, key: string) => {
   return storage.get(key);
 });
 
-ipcMain.handle("get-ollama-health", async () => {
-  return await ollama.health();
-});
-
-ipcMain.handle("get-ollama-models", async () => {
-  return await ollama.models();
-});
 
 ipcMain.handle("search-remote-mcp-servers", async (_event, term: string) => {
   try {

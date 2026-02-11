@@ -1,37 +1,28 @@
-import anthropicProvider from "~/main/ai/providers/anthropic";
-import googleProvider from "~/main/ai/providers/google";
-import ollamaProvider from "~/main/ai/providers/ollama";
-import openaiProvider from "~/main/ai/providers/openai";
-import openaiCompatibleProvider from "~/main/ai/providers/openai-compatible";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+
 import storage from "~/main/utils/storage";
 
-const providers = {
-  ollama: ollamaProvider,
-  openai: openaiProvider,
-  anthropic: anthropicProvider,
-  google: googleProvider,
-  openaiCompatible: openaiCompatibleProvider,
-};
+interface ProviderConfig {
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+}
 
 export const getModel = () => {
-  const selectedProvider = storage.get("selectedProvider", "ollama") as string;
-  const provider = providers[selectedProvider as keyof typeof providers];
-
-  if (!provider) {
-    throw new Error(`Provider '${selectedProvider}' is not supported`);
-  }
-
-  const providerConfigString = storage.get(`provider::${selectedProvider}`);
+  const providerConfigString = storage.get("provider::config");
 
   if (!providerConfigString) {
-    throw new Error(`Provider config for '${selectedProvider}' is not configured`);
+    throw new Error("Provider config is not configured");
   }
 
-  const providerConfig = JSON.parse(providerConfigString as string) as {
-    model: string;
-    apiKey?: string;
-    baseUrl?: string;
-  };
+  const providerConfig = JSON.parse(providerConfigString as string) as ProviderConfig;
+
+  const provider = createOpenAICompatible({
+    name: "openai-compatible",
+    apiKey: providerConfig.apiKey,
+    baseURL: providerConfig.baseUrl,
+    includeUsage: true,
+  });
 
   return provider(providerConfig.model);
 };

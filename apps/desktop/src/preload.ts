@@ -5,9 +5,6 @@ const electronAPI = {
   setStorage: (key: string, value: any) => ipcRenderer.invoke("set-storage", key, value),
   getStorage: (key: string) => ipcRenderer.invoke("get-storage", key),
 
-  // Providers
-  getOllamaHealth: () => ipcRenderer.invoke("get-ollama-health"),
-  getOllamaModels: () => ipcRenderer.invoke("get-ollama-models"),
 
   // MCP Remote Servers
   searchRemoteMCPServers: (term: string) => ipcRenderer.invoke("search-remote-mcp-servers", term),
