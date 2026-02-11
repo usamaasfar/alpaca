@@ -5,7 +5,7 @@ import storage from "~/main/utils/storage";
 interface ProviderConfig {
   model: string;
   baseUrl: string;
-  apiKey?: string;
+  apiKey: string;
 }
 
 export const getModel = () => {
@@ -19,7 +19,7 @@ export const getModel = () => {
 
   const provider = createOpenAICompatible({
     name: "openai-compatible",
-    apiKey: providerConfig.apiKey || "",
+    apiKey: providerConfig.apiKey,
     baseURL: providerConfig.baseUrl,
     includeUsage: true,
   });
