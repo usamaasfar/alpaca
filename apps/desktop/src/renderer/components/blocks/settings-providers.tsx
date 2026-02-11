@@ -118,7 +118,7 @@ const getProviderFormValues = (selectedProvider: ProviderType, providerConfig: P
   return {
     selectedProvider,
     modelName: providerConfig.model,
-    apiKey: providerConfig.apiKey,
+    apiKey: "apiKey" in providerConfig ? providerConfig.apiKey : "",
     baseUrl: "",
   };
 };
