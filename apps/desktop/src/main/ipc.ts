@@ -1,19 +1,25 @@
 import { ipcMain, shell } from "electron";
 
 import composer from "~/main/ai/agents/composer";
+import { model } from "~/main/ai/providers";
 import remote from "~/main/mcp/remote";
 import smitheryService from "~/main/services/smithery";
 import storage from "~/main/utils/storage";
 
 ipcMain.handle("set-storage", (_event, key: string, value: any) => {
   storage.set(key, value);
+
+  // Reload AI model if provider config changed
+  if (key === "provider::config") {
+    model.reload();
+  }
+
   return true;
 });
 
 ipcMain.handle("get-storage", (_event, key: string) => {
   return storage.get(key);
 });
-
 
 ipcMain.handle("search-remote-mcp-servers", async (_event, term: string) => {
   try {

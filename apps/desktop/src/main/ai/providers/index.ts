@@ -1,4 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { type LanguageModel } from "ai";
 
 import storage from "~/main/utils/storage";
 
@@ -8,21 +9,29 @@ interface ProviderConfig {
   apiKey: string;
 }
 
-export const getModel = () => {
-  const providerConfigString = storage.get("provider::config");
+let cachedModel: LanguageModel | null = null;
 
-  if (!providerConfigString) {
-    throw new Error("Provider config is not configured");
-  }
+export const model = {
+  load: () => {
+    if (cachedModel) return cachedModel;
 
-  const providerConfig = JSON.parse(providerConfigString as string) as ProviderConfig;
+    const providerConfigString = storage.get("provider::config");
+    if (!providerConfigString) throw new Error("Provider config is not configured");
 
-  const provider = createOpenAICompatible({
-    name: "openai-compatible",
-    apiKey: providerConfig.apiKey,
-    baseURL: providerConfig.baseUrl,
-    includeUsage: true,
-  });
+    const providerConfig = JSON.parse(providerConfigString as string) as ProviderConfig;
 
-  return provider(providerConfig.model);
+    cachedModel = createOpenAICompatible({
+      name: "openai-compatible",
+      apiKey: providerConfig.apiKey,
+      baseURL: providerConfig.baseUrl,
+      includeUsage: true,
+    })(providerConfig.model);
+
+    return cachedModel;
+  },
+
+  reload: () => {
+    cachedModel = null;
+    return (cachedModel = model.load());
+  },
 };

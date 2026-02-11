@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { memo, useEffect } from "react";
+import { memo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -14,43 +14,22 @@ import { useProvidersSettingsStore } from "~/renderer/stores/providers";
 
 const providerSchema = z.object({
   baseUrl: z.string().min(1, "Base URL is required"),
-  apiKey: z.string().optional(),
+  apiKey: z.string().min(1, "API key is required"),
   model: z.string().min(1, "Model name is required"),
 });
 
 type ProviderForm = z.infer<typeof providerSchema>;
 
 export const SettingsProviders = memo(() => {
-  const { isLoading, config, loadConfig, saveConfig } = useProvidersSettingsStore();
+  const { isLoading, config, setProvider } = useProvidersSettingsStore();
 
   const form = useForm<ProviderForm>({
     resolver: zodResolver(providerSchema),
-    defaultValues: {
-      baseUrl: "",
-      apiKey: "",
-      model: "",
-    },
+    defaultValues: { baseUrl: config?.baseUrl || "", apiKey: config?.apiKey || "", model: config?.model || "" },
   });
 
-  useEffect(() => {
-    loadConfig();
-  }, [loadConfig]);
-
-  useEffect(() => {
-    form.reset({
-      baseUrl: config?.baseUrl || "",
-      apiKey: config?.apiKey || "",
-      model: config?.model || "",
-    });
-  }, [config, form]);
-
   const onSubmit = async (data: ProviderForm) => {
-    await saveConfig({
-      baseUrl: data.baseUrl,
-      apiKey: data.apiKey || "",
-      model: data.model,
-    });
-
+    await setProvider({ baseUrl: data.baseUrl, apiKey: data.apiKey, model: data.model });
     form.reset(data);
   };
 
@@ -62,7 +41,7 @@ export const SettingsProviders = memo(() => {
         </div>
       )}
       <CardHeader className="shrink-0">
-        <CardDescription>Configure your AI provider and model settings</CardDescription>
+        <CardDescription>Configure your OpenAI-compatible AI provider and model settings</CardDescription>
       </CardHeader>
       <ScrollArea className="flex-1 h-0">
         <CardContent className="pb-6">
@@ -73,7 +52,7 @@ export const SettingsProviders = memo(() => {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <Label htmlFor={field.name}>Base URL</Label>
-                  <Input {...field} id={field.name} placeholder="http://localhost:11434/v1" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id={field.name} placeholder="http://localhost:11434/v1/" aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}
@@ -84,7 +63,7 @@ export const SettingsProviders = memo(() => {
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <Label htmlFor={field.name}>API Key (optional)</Label>
+                  <Label htmlFor={field.name}>API Key</Label>
                   <Input {...field} id={field.name} type="password" placeholder="Enter API key" aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
@@ -97,7 +76,7 @@ export const SettingsProviders = memo(() => {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <Label htmlFor={field.name}>Model Name</Label>
-                  <Input {...field} id={field.name} placeholder="e.g., llama3.2" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id={field.name} placeholder="e.g., kimi-k2.5:cloud" aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}
