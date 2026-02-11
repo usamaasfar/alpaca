@@ -1,4 +1,4 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 import storage from "~/main/utils/storage";
 
@@ -13,8 +13,11 @@ export default function openaiProvider(model: string) {
     apiKey: string;
   };
 
-  const provider = createOpenAI({
+  const provider = createOpenAICompatible({
+    name: "openai",
     apiKey: config.apiKey,
+    baseURL: "https://api.openai.com/v1",
+    includeUsage: true,
   });
 
   return provider(model);

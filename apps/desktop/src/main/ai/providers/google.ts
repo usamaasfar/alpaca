@@ -1,4 +1,4 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 import storage from "~/main/utils/storage";
 
@@ -13,8 +13,11 @@ export default function googleProvider(model: string) {
     apiKey: string;
   };
 
-  const provider = createGoogleGenerativeAI({
+  const provider = createOpenAICompatible({
+    name: "google",
     apiKey: config.apiKey,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+    includeUsage: true,
   });
 
   return provider(model);
