@@ -1,10 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect, type SyntheticEvent } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
-import { PROVIDERS } from "~/common/providers";
+import { PROVIDERS, type ProviderType } from "~/common/providers";
 import { Button } from "~/renderer/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "~/renderer/components/ui/card";
 import { Field, FieldError } from "~/renderer/components/ui/field";
@@ -12,7 +12,127 @@ import { Input } from "~/renderer/components/ui/input";
 import { Label } from "~/renderer/components/ui/label";
 import { ScrollArea } from "~/renderer/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/renderer/components/ui/select";
-import { useProvidersSettingsStore } from "~/renderer/stores/providers";
+import {
+  type AnthropicProvider,
+  type GoogleProvider,
+  type OllamaProvider,
+  type OpenAICompatibleProvider,
+  type OpenAIProvider,
+  useProvidersSettingsStore,
+} from "~/renderer/stores/providers";
+
+const PROVIDER_TYPES = ["ollama", "openaiCompatible", "openai", "anthropic", "google"] as const;
+
+const PROVIDER_LOOKUP = Object.fromEntries(PROVIDERS.map((provider) => [provider.type, provider])) as Record<
+  ProviderType,
+  (typeof PROVIDERS)[number]
+>;
+
+const API_KEY_PROVIDERS = new Set<ProviderType>(["openai", "anthropic", "google", "openaiCompatible"]);
+
+type ProviderForm = {
+  selectedProvider: ProviderType;
+  modelName: string;
+  apiKey?: string;
+  baseUrl?: string;
+};
+
+const providerSchema = z
+  .object({
+    selectedProvider: z.enum(PROVIDER_TYPES),
+    modelName: z.string().min(1, "Model name is required"),
+    apiKey: z.string().optional(),
+    baseUrl: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (API_KEY_PROVIDERS.has(data.selectedProvider) && !data.apiKey) {
+      ctx.addIssue({
+        code: "custom",
+        message: "API Key is required",
+        path: ["apiKey"],
+      });
+    }
+
+    if (data.selectedProvider === "openaiCompatible" && !data.baseUrl) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Base URL is required",
+        path: ["baseUrl"],
+      });
+    }
+  });
+
+const getApiKeyPlaceholder = (provider: ProviderType) => {
+  switch (provider) {
+    case "openai":
+      return "sk-...";
+    case "anthropic":
+      return "sk-ant-...";
+    case "google":
+      return "AIza...";
+    default:
+      return "Enter your API key";
+  }
+};
+
+const hideBrokenImage = (event: SyntheticEvent<HTMLImageElement>) => {
+  event.currentTarget.style.display = "none";
+};
+
+type PersistedProvider =
+  | OllamaProvider
+  | OpenAICompatibleProvider
+  | OpenAIProvider
+  | AnthropicProvider
+  | GoogleProvider
+  | undefined;
+
+const getProviderFormValues = (selectedProvider: ProviderType, providerConfig: PersistedProvider): ProviderForm => {
+  if (!providerConfig) {
+    return {
+      selectedProvider,
+      modelName: "",
+      apiKey: "",
+      baseUrl: "",
+    };
+  }
+
+  if (providerConfig.provider === "ollama") {
+    return {
+      selectedProvider,
+      modelName: providerConfig.model,
+      apiKey: "",
+      baseUrl: "",
+    };
+  }
+
+  if (providerConfig.provider === "openaiCompatible") {
+    return {
+      selectedProvider,
+      modelName: providerConfig.model,
+      apiKey: providerConfig.apiKey,
+      baseUrl: providerConfig.baseUrl,
+    };
+  }
+
+  return {
+    selectedProvider,
+    modelName: providerConfig.model,
+    apiKey: providerConfig.apiKey,
+    baseUrl: "",
+  };
+};
+
+const ProviderOption = ({ providerType }: { providerType: ProviderType }) => {
+  const provider = PROVIDER_LOOKUP[providerType];
+
+  return (
+    <div className="flex items-center space-x-2">
+      <img src={provider.logo} alt={provider.displayName} className="w-4 h-4 object-contain invert" onError={hideBrokenImage} />
+      <span>{provider.displayName}</span>
+    </div>
+  );
+};
 
 export const SettingsProviders = memo(() => {
   const {
@@ -28,38 +148,10 @@ export const SettingsProviders = memo(() => {
     setSelectedProvider,
   } = useProvidersSettingsStore();
 
-  const providerSchema = useMemo(() => {
-    return z
-      .object({
-        selectedProvider: z.enum(["ollama", "openaiCompatible"]),
-        modelName: z.string().min(1, "Model name is required"),
-        apiKey: z.string().optional(),
-        baseUrl: z.string().optional(),
-      })
-      .superRefine((data, ctx) => {
-        if (data.selectedProvider === "openaiCompatible") {
-          if (!data.apiKey) {
-            ctx.addIssue({
-              code: "custom",
-              message: "API Key is required",
-              path: ["apiKey"],
-            });
-          }
-          if (!data.baseUrl) {
-            ctx.addIssue({
-              code: "custom",
-              message: "Base URL is required",
-              path: ["baseUrl"],
-            });
-          }
-        }
-      });
-  }, []);
-
-  const form = useForm<z.infer<typeof providerSchema>>({
+  const form = useForm<ProviderForm>({
     resolver: zodResolver(providerSchema),
     defaultValues: {
-      selectedProvider: selectedProvider,
+      selectedProvider,
       modelName: "",
       apiKey: "",
       baseUrl: "",
@@ -77,27 +169,27 @@ export const SettingsProviders = memo(() => {
   }, [getOllamaHealth]);
 
   useEffect(() => {
-    if (formSelectedProvider === "ollama" && isOllamaConnected) getOllamaModels();
+    if (formSelectedProvider === "ollama" && isOllamaConnected) {
+      getOllamaModels();
+    }
   }, [formSelectedProvider, isOllamaConnected, getOllamaModels]);
 
   useEffect(() => {
-    if (selectedProvider) form.setValue("selectedProvider", selectedProvider);
+    form.setValue("selectedProvider", selectedProvider);
   }, [selectedProvider, form]);
 
   useEffect(() => {
     const providerConfig = providers[formSelectedProvider];
-    const isOpenAICompatible = providerConfig?.provider === "openaiCompatible";
-    const formData = {
-      selectedProvider: formSelectedProvider,
-      modelName: providerConfig?.model || "",
-      apiKey: isOpenAICompatible ? providerConfig.apiKey : "",
-      baseUrl: isOpenAICompatible ? providerConfig.baseUrl : "",
-    };
-    form.reset(formData);
+    form.reset(getProviderFormValues(formSelectedProvider, providerConfig));
   }, [formSelectedProvider, providers, form]);
 
-  const onSubmit = async (data: z.infer<typeof providerSchema>) => {
-    if (data.selectedProvider === "openaiCompatible") {
+  const onSubmit = async (data: ProviderForm) => {
+    if (data.selectedProvider === "ollama") {
+      await setProvider({
+        provider: data.selectedProvider,
+        model: data.modelName,
+      });
+    } else if (data.selectedProvider === "openaiCompatible") {
       await setProvider({
         provider: data.selectedProvider,
         model: data.modelName,
@@ -108,16 +200,44 @@ export const SettingsProviders = memo(() => {
       await setProvider({
         provider: data.selectedProvider,
         model: data.modelName,
+        apiKey: data.apiKey || "",
       });
     }
+
     await setSelectedProvider(data.selectedProvider);
     form.reset(data);
   };
 
-  // Check if current form differs from selected provider
   const hasProviderChanges = formSelectedProvider !== selectedProvider;
-  const hasFormChanges = form.formState.isDirty;
-  const shouldEnableButton = hasProviderChanges || hasFormChanges;
+  const shouldEnableButton = hasProviderChanges || form.formState.isDirty;
+
+  const renderModelInput = (placeholder = "e.g., gpt-4o-mini") => (
+    <Controller
+      name="modelName"
+      control={form.control}
+      render={({ field, fieldState }) => (
+        <Field data-invalid={fieldState.invalid}>
+          <Label htmlFor={field.name}>Model Name</Label>
+          <Input {...field} id={field.name} placeholder={placeholder} aria-invalid={fieldState.invalid} />
+          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+        </Field>
+      )}
+    />
+  );
+
+  const renderApiKeyInput = () => (
+    <Controller
+      name="apiKey"
+      control={form.control}
+      render={({ field, fieldState }) => (
+        <Field data-invalid={fieldState.invalid}>
+          <Label htmlFor={field.name}>API Key</Label>
+          <Input {...field} id={field.name} type="password" placeholder={getApiKeyPlaceholder(formSelectedProvider)} aria-invalid={fieldState.invalid} />
+          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+        </Field>
+      )}
+    />
+  );
 
   const renderProviderFields = () => {
     switch (formSelectedProvider) {
@@ -163,17 +283,7 @@ export const SettingsProviders = memo(() => {
       case "openaiCompatible":
         return (
           <>
-            <Controller
-              name="modelName"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <Label htmlFor={field.name}>Model Name</Label>
-                  <Input {...field} id={field.name} placeholder="e.g., llama-3.1-70b" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
+            {renderModelInput("e.g., llama-3.1-70b")}
             <Controller
               name="baseUrl"
               control={form.control}
@@ -185,17 +295,17 @@ export const SettingsProviders = memo(() => {
                 </Field>
               )}
             />
-            <Controller
-              name="apiKey"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <Label htmlFor={field.name}>API Key</Label>
-                  <Input {...field} id={field.name} type="password" placeholder="Enter your API key" aria-invalid={fieldState.invalid} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
+            {renderApiKeyInput()}
+          </>
+        );
+
+      case "openai":
+      case "anthropic":
+      case "google":
+        return (
+          <>
+            {renderModelInput()}
+            {renderApiKeyInput()}
           </>
         );
 
@@ -225,38 +335,12 @@ export const SettingsProviders = memo(() => {
                   <Label htmlFor={field.name}>{field.value === selectedProvider ? "Selected" : "Select"} Provider</Label>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a provider">
-                        {field.value && (
-                          <div className="flex items-center space-x-2">
-                            <img
-                              src={PROVIDERS.find((p) => p.type === field.value)?.logo}
-                              alt={PROVIDERS.find((p) => p.type === field.value)?.displayName}
-                              className="w-4 h-4 object-contain invert"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = "none";
-                              }}
-                            />
-                            <span>{PROVIDERS.find((p) => p.type === field.value)?.displayName}</span>
-                          </div>
-                        )}
-                      </SelectValue>
+                      <SelectValue placeholder="Select a provider">{field.value && <ProviderOption providerType={field.value} />}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {PROVIDERS.map((provider) => (
                         <SelectItem key={provider.type} value={provider.type}>
-                          <div className="flex items-center space-x-2">
-                            <img
-                              src={provider.logo}
-                              alt={provider.displayName}
-                              className="w-4 h-4 object-contain invert"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = "none";
-                              }}
-                            />
-                            <span>{provider.displayName}</span>
-                          </div>
+                          <ProviderOption providerType={provider.type} />
                         </SelectItem>
                       ))}
                     </SelectContent>
