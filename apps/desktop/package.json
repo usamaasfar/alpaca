@@ -1,7 +1,7 @@
 {
   "name": "alpaca",
   "productName": "Alpaca",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Your private AI assistant that actually gets things done",
   "main": ".vite/build/main.js",
   "private": true,
