@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -18,7 +18,7 @@ const formSchema = z.object({
   customInstructions: z.string().max(500, "Instructions must be at most 500 characters"),
 });
 
-export const SettingsGeneral = () => {
+export const SettingsGeneral = memo(() => {
   const { isLoading, username, customInstructions, setGeneralSetting, getGeneralSettings } = useGeneralSettingsStore();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -32,7 +32,7 @@ export const SettingsGeneral = () => {
 
   useEffect(() => {
     form.reset({ username, customInstructions });
-  }, [form, username, customInstructions]);
+  }, [username, customInstructions, form]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     await setGeneralSetting(data);
@@ -88,4 +88,4 @@ export const SettingsGeneral = () => {
       </ScrollArea>
     </Card>
   );
-};
+});

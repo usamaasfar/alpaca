@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
@@ -35,11 +35,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Create Electron symlink for Electron Forge
+        run: |
+          mkdir -p apps/desktop/node_modules
+          ln -sf ../../../node_modules/electron apps/desktop/node_modules/electron
 
       - name: Build
         env:

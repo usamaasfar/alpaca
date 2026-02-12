@@ -1,163 +1,32 @@
-import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
-import { shell } from "electron";
-import storage from "~/main/utils/storage";
-
+import type { MCPClient } from "@ai-sdk/mcp";
+import { createMCPClient, UnauthorizedError } from "@ai-sdk/mcp";
 import type { server } from "~/renderer/stores/servers";
+import { AlpacaOAuthProvider } from "./oauth-provider";
+import { loadAllServers, loadServer, removeServer, sanitizeServerData, saveServer } from "./storage";
+import type { ConnectionResult, MCPConnectionState, PublicServerData, ReconnectStatus } from "./types";
 
-/**
- * OAuth client provider for MCP servers
- * Handles authentication and token persistence using OS secure storage
- */
-export class OAuthClientProvider {
-  private _tokens?: any;
-  private _clientInfo?: any;
-  private _codeVerifier?: string;
-  private _authInProgress = false;
-  private storageKey: string;
+// --- Runtime state ---
 
-  constructor(private serverName: string) {
-    this.storageKey = `mcp-${serverName.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-auth`;
-    this.loadTokens();
-  }
+const state: MCPConnectionState = {
+  clients: new Map<string, MCPClient>(),
+  authProviders: new Map<string, AlpacaOAuthProvider>(),
+  toolsCache: new Map<string, Record<string, any>>(),
+};
 
-  private loadTokens() {
-    try {
-      const saved = storage.get(this.storageKey);
-      if (saved) {
-        const data = JSON.parse(saved as string);
-        this._tokens = data.tokens;
-        this._clientInfo = data.clientInfo;
-        console.log(`Loaded saved tokens for ${this.serverName}`);
-      }
-    } catch (error) {
-      console.log(`No saved tokens for ${this.serverName}`);
-    }
-  }
-
-  private saveTokensToStorage() {
-    try {
-      const data = { tokens: this._tokens, clientInfo: this._clientInfo, updatedAt: new Date().toISOString() };
-      storage.set(this.storageKey, JSON.stringify(data));
-      console.log(`Saved tokens for ${this.serverName}`);
-    } catch (error) {
-      console.error(`Failed to save tokens for ${this.serverName}:`, error);
-    }
-  }
-
-  get redirectUrl(): string {
-    return "alpaca.computer://oauth/callback";
-  }
-
-  get clientMetadata() {
-    return {
-      client_name: "Alpaca Computer Desktop",
-      redirect_uris: [this.redirectUrl],
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-      token_endpoint_auth_method: "none",
-      scope: "mcp:tools",
-    };
-  }
-
-  clientInformation() {
-    return this._clientInfo;
-  }
-
-  async saveClientInformation(info: any) {
-    this._clientInfo = info;
-    this.saveTokensToStorage();
-  }
-
-  tokens() {
-    return this._tokens;
-  }
-
-  async saveTokens(tokens: any) {
-    this._tokens = tokens;
-    this._authInProgress = false;
-    this.saveTokensToStorage();
-    console.log(`OAuth complete for ${this.serverName}`);
-  }
-
-  async redirectToAuthorization(url: URL) {
-    if (this._authInProgress) {
-      console.log(`Skipping duplicate OAuth URL for ${this.serverName} (auth already in progress)`);
-      return;
-    }
-
-    console.log(`Opening OAuth URL for ${this.serverName}`);
-    this._authInProgress = true;
-    await shell.openExternal(url.toString());
-  }
-
-  async saveCodeVerifier(verifier: string) {
-    if (this._authInProgress && this._codeVerifier) {
-      console.log(`Skipping code verifier update for ${this.serverName} (auth in progress, keeping original verifier)`);
-      return;
-    }
-    this._codeVerifier = verifier;
-  }
-
-  async codeVerifier() {
-    if (!this._codeVerifier) throw new Error("No code verifier saved");
-    return this._codeVerifier;
-  }
-
-  deleteTokens() {
-    this._tokens = undefined;
-    this._clientInfo = undefined;
-    this._codeVerifier = undefined;
-    this._authInProgress = false;
-    try {
-      storage.delete(this.storageKey);
-    } catch (error) {
-      console.error(`Failed to delete tokens for ${this.serverName}:`, error);
-    }
-  }
-}
-
-const connectionClients = new Map<any, any>();
-const authProviders = new Map<string, OAuthClientProvider>();
-const toolsCache = new Map<string, Record<string, any>>();
+// --- Helper functions ---
 
 function getServerUrl(namespace: string): string {
   return `https://server.smithery.ai/${namespace}`;
 }
 
-function saveConnectedServers(server: server) {
-  const storedServers = storage.get("remote-connected-servers") as Record<string, server> | undefined;
-  if (storedServers) {
-    const servers = { ...storedServers, [server.namespace]: server };
-    storage.set("remote-connected-servers", servers as any);
-  } else {
-    storage.set("remote-connected-servers", { [server.namespace]: server } as any);
-  }
-}
-
-function removeConnectedServer(namespace: string) {
-  const storedServers = storage.get("remote-connected-servers") as Record<string, server> | undefined;
-  if (storedServers) {
-    const servers = { ...storedServers };
-    delete servers[namespace];
-    storage.set("remote-connected-servers", servers as any);
-  }
-}
-
-function loadConnectedServers(): Record<string, server> {
-  return storage.get("remote-connected-servers", {}) as Record<string, server>;
-}
-
-/**
- * Load and cache tools from a specific MCP server
- */
 async function loadAndCacheTools(namespace: string): Promise<void> {
-  const client = connectionClients.get(namespace);
+  const client = state.clients.get(namespace);
   if (!client) return;
 
   try {
     if (typeof client.tools === "function") {
       const tools = await client.tools();
-      toolsCache.set(namespace, tools);
+      state.toolsCache.set(namespace, tools);
       console.log(`Cached ${Object.keys(tools).length} tools from ${namespace}`);
     }
   } catch (error) {
@@ -165,30 +34,43 @@ async function loadAndCacheTools(namespace: string): Promise<void> {
   }
 }
 
+// --- Public API ---
+
 export default {
-  async connectServer(server: server) {
+  /**
+   * Connect to a remote MCP server
+   * Returns reAuth: true if OAuth flow is required
+   */
+  async connectServer(server: server): Promise<ConnectionResult> {
     try {
-      console.log(server);
       console.log(`Connecting to ${server.namespace}`);
-      let authProvider = authProviders.get(server.namespace);
+
+      let authProvider = state.authProviders.get(server.namespace);
       if (!authProvider) {
-        authProvider = new OAuthClientProvider(server.namespace);
-        authProviders.set(server.namespace, authProvider);
+        const stored = loadServer(server.namespace);
+        authProvider = new AlpacaOAuthProvider(server.namespace, stored?.tokens, stored?.clientInfo);
+        state.authProviders.set(server.namespace, authProvider);
       }
 
-      const client = await createMCPClient({ transport: { type: "http", url: getServerUrl(server.namespace), authProvider } });
-      saveConnectedServers(server);
-      connectionClients.set(server.namespace, client);
+      const client = await createMCPClient({
+        transport: {
+          type: "http",
+          url: getServerUrl(server.namespace),
+          authProvider,
+        },
+      });
 
-      // Cache tools immediately after connection
+      saveServer(server.namespace, server);
+      state.clients.set(server.namespace, client);
+
       await loadAndCacheTools(server.namespace);
 
       return { reAuth: false };
     } catch (error: any) {
-      // If unauthorized, OAuth flow has started - wait for callback
-      if (error.message?.includes("Unauthorized") || error.code === "UNAUTHORIZED") {
+      // Use proper UnauthorizedError type from @ai-sdk/mcp
+      if (error instanceof UnauthorizedError || error.message?.includes("Unauthorized") || error.code === "UNAUTHORIZED") {
         console.log(`OAuth flow initiated for ${server.namespace}, waiting for authorization...`);
-        saveConnectedServers(server); // Save server even if not connected yet
+        saveServer(server.namespace, server);
         return { reAuth: true };
       }
 
@@ -197,53 +79,69 @@ export default {
     }
   },
 
-  async disconnectServer(namespace: string) {
-    // Close the active connection
-    const client = connectionClients.get(namespace);
-    if (client) await client.close();
-    connectionClients.delete(namespace);
+  /**
+   * Disconnect from a remote MCP server and clean up resources
+   */
+  async disconnectServer(namespace: string): Promise<void> {
+    const client = state.clients.get(namespace);
+    if (client) {
+      try {
+        await client.close();
+      } catch (error) {
+        console.error(`Error closing client for ${namespace}:`, error);
+      }
+    }
+    state.clients.delete(namespace);
+    state.toolsCache.delete(namespace);
 
-    // Clear cached tools
-    toolsCache.delete(namespace);
-
-    // Delete OAuth tokens
-    const authProvider = authProviders.get(namespace);
+    const authProvider = state.authProviders.get(namespace);
     if (authProvider) {
       authProvider.deleteTokens();
-      authProviders.delete(namespace);
+      state.authProviders.delete(namespace);
     }
 
-    // Remove from saved servers list
-    removeConnectedServer(namespace);
+    removeServer(namespace);
   },
 
   /**
-   * List all saved servers with their current connection status
-   * Returns: { namespace: { ...serverData, connected: boolean } }
+   * List all connected servers with sanitized data (no OAuth fields)
    */
-  listConnectedServers(): Record<string, server & { connected: boolean }> {
-    const savedServers = loadConnectedServers();
-    const result: Record<string, server & { connected: boolean }> = {};
+  listConnectedServers(): Record<string, PublicServerData> {
+    const allServers = loadAllServers();
+    const result: Record<string, PublicServerData> = {};
 
-    for (const [namespace, serverData] of Object.entries(savedServers)) {
-      result[namespace] = { ...serverData, connected: connectionClients.has(namespace) };
+    for (const [namespace, data] of Object.entries(allServers)) {
+      const connected = state.clients.has(namespace);
+      result[namespace] = sanitizeServerData(data, connected);
     }
 
     return result;
   },
 
-  async completeOAuth(namespace: string, authCode: string) {
+  /**
+   * Complete OAuth flow after receiving authorization code
+   * FIX: Better error handling and partial success support
+   */
+  async completeOAuth(namespace: string, authCode: string): Promise<ConnectionResult> {
     try {
       console.log(`Completing OAuth for ${namespace}`);
 
-      const authProvider = authProviders.get(namespace);
+      const authProvider = state.authProviders.get(namespace);
       if (!authProvider) {
-        throw new Error(`No auth provider found for ${namespace}`);
+        const error = `No auth provider found for ${namespace}`;
+        console.error(error);
+        return {
+          success: false,
+          reAuth: false,
+          error: "no_auth_provider",
+          message: error,
+        };
       }
 
       const serverUrl = getServerUrl(namespace);
       const tokenUrlObj = new URL(serverUrl);
 
+      // Convert server URL to auth URL
       if (tokenUrlObj.hostname.includes("server.smithery.ai")) {
         tokenUrlObj.hostname = tokenUrlObj.hostname.replace("server.smithery.ai", "auth.smithery.ai");
       }
@@ -251,9 +149,25 @@ export default {
       tokenUrlObj.pathname = tokenUrlObj.pathname.replace(/\/$/, "") + "/token";
       const tokenUrl = tokenUrlObj.toString();
 
-      const codeVerifier = await authProvider.codeVerifier();
-      const clientInfo = authProvider.clientInformation();
+      // Get code verifier and client info
+      let codeVerifier: string;
+      try {
+        codeVerifier = await authProvider.codeVerifier();
+      } catch (error) {
+        const message = `No code verifier found for ${namespace}. ${error}`;
+        console.error(message);
+        authProvider.resetAuthState();
+        return {
+          success: false,
+          reAuth: false,
+          error: "invalid_code",
+          message,
+        };
+      }
 
+      const clientInfoData = authProvider.clientInformation();
+
+      // Prepare token request
       const tokenParams: Record<string, string> = {
         grant_type: "authorization_code",
         code: authCode,
@@ -261,12 +175,13 @@ export default {
         code_verifier: codeVerifier,
       };
 
-      if (clientInfo?.client_id) {
-        tokenParams.client_id = clientInfo.client_id;
+      if (clientInfoData?.client_id) {
+        tokenParams.client_id = clientInfoData.client_id;
       }
 
       console.log(`Exchanging auth code for tokens at ${tokenUrl}`);
 
+      // Exchange code for tokens
       const response = await fetch(tokenUrl, {
         method: "POST",
         headers: {
@@ -278,71 +193,108 @@ export default {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Token exchange failed:`, errorText);
-        throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
+        authProvider.resetAuthState();
+        return {
+          success: false,
+          reAuth: false,
+          error: "token_exchange_failed",
+          message: `Token exchange failed: ${response.status} ${response.statusText}`,
+        };
       }
 
       const tokens = await response.json();
       console.log(`Tokens received, saving for ${namespace}`);
 
+      // Save tokens (this also resets auth state)
       await authProvider.saveTokens(tokens);
 
       console.log(`OAuth completed for ${namespace}. Reconnecting...`);
 
-      // Get the saved server data
-      const savedServers = loadConnectedServers();
-      const serverData = savedServers[namespace];
-
-      if (!serverData) {
-        throw new Error(`Server data not found for ${namespace}`);
+      // Try to reconnect with new tokens
+      const stored = loadServer(namespace);
+      if (!stored) {
+        const message = `Server data not found for ${namespace}`;
+        console.error(message);
+        return {
+          success: true,
+          reAuth: false,
+          error: "reconnection_failed",
+          message,
+        };
       }
 
-      await this.connectServer(serverData);
+      // FIX: Wrap reconnection in try-catch to handle partial success
+      try {
+        // Pass only server metadata to avoid re-saving stale token snapshot
+        const { tokens: _t, clientInfo: _c, updatedAt: _u, ...serverData } = stored;
+        await this.connectServer(serverData as server);
 
-      return { success: true, reAuth: false };
+        return { success: true, reAuth: false };
+      } catch (reconnectError: any) {
+        // OAuth succeeded (tokens saved), but reconnection failed
+        // This is a partial success - user can retry manually
+        console.error(`OAuth succeeded but reconnection failed for ${namespace}:`, reconnectError);
+        return {
+          success: true,
+          reAuth: false,
+          error: "reconnection_failed",
+          message: `OAuth completed but connection failed: ${reconnectError.message}`,
+        };
+      }
     } catch (error: any) {
       console.error(`Failed to complete OAuth for ${namespace}:`, error);
+
+      // Reset auth state on error
+      const authProvider = state.authProviders.get(namespace);
+      if (authProvider) {
+        authProvider.resetAuthState();
+      }
+
       throw error;
     }
   },
 
-  async reconnectAll(onStatus?: (status: { type: string; namespace?: string; total?: number; connected?: number }) => void) {
-    const savedServers = loadConnectedServers();
-    const namespaces = Object.keys(savedServers);
+  /**
+   * Reconnect to all saved servers on app startup
+   */
+  async reconnectAll(onStatus?: (status: ReconnectStatus) => void): Promise<void> {
+    const allServers = loadAllServers();
+    const namespaces = Object.keys(allServers);
 
     console.log(`Reconnecting to ${namespaces.length} saved servers`, namespaces);
 
-    // Send initial status
     onStatus?.({ type: "start", total: namespaces.length });
 
-    // Connect to all servers in parallel
     const connectionPromises = namespaces.map(async (namespace) => {
       try {
-        // Send connecting status
         onStatus?.({ type: "connecting", namespace });
 
-        // Create or reuse auth provider
-        let authProvider = authProviders.get(namespace);
+        const serverData = allServers[namespace];
+        let authProvider = state.authProviders.get(namespace);
+
         if (!authProvider) {
-          authProvider = new OAuthClientProvider(namespace);
-          authProviders.set(namespace, authProvider);
+          authProvider = new AlpacaOAuthProvider(namespace, serverData.tokens, serverData.clientInfo);
+          state.authProviders.set(namespace, authProvider);
         }
 
-        // Skip if no tokens (will need re-auth) - shows disconnected
         if (!authProvider.tokens()) {
           onStatus?.({ type: "skipped", namespace });
           return { status: "skipped", namespace };
         }
 
-        // Attempt reconnection
-        const client = await createMCPClient({ transport: { type: "http", url: getServerUrl(namespace), authProvider } });
+        const client = await createMCPClient({
+          transport: {
+            type: "http",
+            url: getServerUrl(namespace),
+            authProvider,
+          },
+        });
 
-        connectionClients.set(namespace, client);
+        state.clients.set(namespace, client);
         console.log(`Reconnected to ${namespace}`);
 
-        // Cache tools after reconnection
         await loadAndCacheTools(namespace);
 
-        // Send success status
         onStatus?.({ type: "connected", namespace });
         return { status: "connected", namespace };
       } catch (error) {
@@ -352,40 +304,39 @@ export default {
       }
     });
 
-    // Wait for all connections to complete (parallel)
     await Promise.allSettled(connectionPromises);
 
-    console.log(`Reconnection complete: ${connectionClients.size}/${namespaces.length} servers connected`);
+    console.log(`Reconnection complete: ${state.clients.size}/${namespaces.length} servers connected`);
 
-    // Send completion status
-    onStatus?.({ type: "complete", total: namespaces.length, connected: connectionClients.size });
+    onStatus?.({
+      type: "complete",
+      total: namespaces.length,
+      connected: state.clients.size,
+    });
   },
 
   /**
-   * Get all tools from connected MCP servers (uses cache)
-   * Returns: Object with tools from all connected servers
+   * Get all cached tools from all connected servers
    */
-  getAllTools() {
+  getAllTools(): Record<string, any> {
     const allTools: Record<string, any> = {};
 
-    for (const [, tools] of toolsCache.entries()) {
+    for (const [, tools] of state.toolsCache.entries()) {
       Object.assign(allTools, tools);
     }
 
-    console.log(`Total cached MCP tools available: ${Object.keys(allTools).length} from ${toolsCache.size} servers`);
+    console.log(`Total cached MCP tools available: ${Object.keys(allTools).length} from ${state.toolsCache.size} servers`);
     return allTools;
   },
 
   /**
-   * Get tools from specific MCP servers by namespace (uses cache)
-   * @param namespaces - Array of namespaces to get tools from (e.g., ['gmail', 'linear'])
-   * Returns: Object with tools from specified servers
+   * Get cached tools from specific servers
    */
-  getToolsFromServers(namespaces: string[]) {
+  getToolsFromServers(namespaces: string[]): Record<string, any> {
     const tools: Record<string, any> = {};
 
     for (const namespace of namespaces) {
-      const cachedTools = toolsCache.get(namespace);
+      const cachedTools = state.toolsCache.get(namespace);
 
       if (cachedTools) {
         Object.assign(tools, cachedTools);
@@ -397,5 +348,31 @@ export default {
 
     console.log(`Total cached tools from ${namespaces.length} servers: ${Object.keys(tools).length}`);
     return tools;
+  },
+
+  /**
+   * Clean up all MCP connections and clear state
+   * Should be called on app shutdown
+   */
+  async cleanup(): Promise<void> {
+    console.log(`Cleaning up ${state.clients.size} MCP connections...`);
+
+    const closePromises = Array.from(state.clients.entries()).map(async ([namespace, client]) => {
+      try {
+        await client.close();
+        console.log(`Closed connection to ${namespace}`);
+      } catch (error) {
+        console.error(`Error closing connection to ${namespace}:`, error);
+      }
+    });
+
+    await Promise.allSettled(closePromises);
+
+    // Clear all state
+    state.clients.clear();
+    state.authProviders.clear();
+    state.toolsCache.clear();
+
+    console.log("MCP cleanup complete");
   },
 };

@@ -1,7 +1,8 @@
 import { stepCountIs, type Tool, ToolLoopAgent } from "ai";
+
 import { truncate } from "~/main/ai/agents/tooling";
 import composerPrompt from "~/main/ai/prompt/composer";
-import { getModel } from "~/main/ai/providers";
+import { model } from "~/main/ai/providers";
 
 /**
  * Create a composer agent with tools from MCP servers
@@ -12,7 +13,7 @@ function composer(mcpTools: Record<string, Tool> = {}) {
   try {
     const composer = new ToolLoopAgent({
       instructions: composerPrompt,
-      model: getModel(),
+      model: model.load(),
       stopWhen: stepCountIs(128),
       tools: mcpTools,
       temperature: 0.7,

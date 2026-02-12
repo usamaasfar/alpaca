@@ -1,26 +1,24 @@
 import { ipcMain, shell } from "electron";
 
 import composer from "~/main/ai/agents/composer";
+import { model } from "~/main/ai/providers";
 import remote from "~/main/mcp/remote";
-import ollama from "~/main/services/ollama";
 import smitheryService from "~/main/services/smithery";
 import storage from "~/main/utils/storage";
 
 ipcMain.handle("set-storage", (_event, key: string, value: any) => {
   storage.set(key, value);
+
+  // Reload AI model if provider config changed
+  if (key === "provider::config") {
+    model.reload();
+  }
+
   return true;
 });
 
 ipcMain.handle("get-storage", (_event, key: string) => {
   return storage.get(key);
-});
-
-ipcMain.handle("get-ollama-health", async () => {
-  return await ollama.health();
-});
-
-ipcMain.handle("get-ollama-models", async () => {
-  return await ollama.models();
 });
 
 ipcMain.handle("search-remote-mcp-servers", async (_event, term: string) => {
@@ -35,9 +33,8 @@ ipcMain.handle("search-remote-mcp-servers", async (_event, term: string) => {
 ipcMain.handle("connect-remote-server", async (_event, server: any) => {
   try {
     const result = await remote.connectServer(server);
-
-    if (result.reAuth) return { success: false, reAuth: true };
-    else return { success: true };
+    // Return the full result with proper typing
+    return result.reAuth ? { success: false, reAuth: true } : { success: true, reAuth: false };
   } catch (error) {
     console.error("Error connecting to remote MCP:", error);
     throw error;
