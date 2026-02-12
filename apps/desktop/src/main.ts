@@ -121,8 +121,12 @@ app.on("activate", () => {
 });
 
 // Clean up MCP connections before app quits
+let isCleanupDone = false;
 app.on("before-quit", async (event) => {
-  event.preventDefault();
-  await remote.cleanup();
-  app.exit();
+  if (!isCleanupDone) {
+    event.preventDefault();
+    await remote.cleanup();
+    isCleanupDone = true;
+    app.quit();
+  }
 });

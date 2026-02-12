@@ -25,7 +25,10 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
       if (!configJson) return set({ config: undefined, isLoading: false });
 
       const parsedConfig = JSON.parse(configJson as string) as Partial<ProviderConfig>;
-      set({ config: { model: parsedConfig.model, baseUrl: parsedConfig.baseUrl, apiKey: parsedConfig.apiKey }, isLoading: false });
+      if (!parsedConfig.model || !parsedConfig.baseUrl || !parsedConfig.apiKey) {
+        return set({ config: undefined, isLoading: false });
+      }
+      set({ config: parsedConfig as ProviderConfig, isLoading: false });
     } catch (error) {
       console.error(error);
     } finally {
