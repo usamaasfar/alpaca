@@ -105,8 +105,9 @@ app.on("ready", createWindow);
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on("window-all-closed", () => {
+app.on("window-all-closed", async () => {
   if (process.platform !== "darwin") {
+    await remote.cleanup();
     app.quit();
   }
 });
@@ -117,4 +118,11 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+// Clean up MCP connections before app quits
+app.on("before-quit", async (event) => {
+  event.preventDefault();
+  await remote.cleanup();
+  app.exit();
 });

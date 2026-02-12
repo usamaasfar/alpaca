@@ -33,9 +33,8 @@ ipcMain.handle("search-remote-mcp-servers", async (_event, term: string) => {
 ipcMain.handle("connect-remote-server", async (_event, server: any) => {
   try {
     const result = await remote.connectServer(server);
-
-    if (result.reAuth) return { success: false, reAuth: true };
-    else return { success: true };
+    // Return the full result with proper typing
+    return result.reAuth ? { success: false, reAuth: true } : { success: true, reAuth: false };
   } catch (error) {
     console.error("Error connecting to remote MCP:", error);
     throw error;

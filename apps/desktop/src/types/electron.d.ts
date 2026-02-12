@@ -1,17 +1,18 @@
 import type { server, serverSearchResult } from "~/renderer/stores/servers";
 
 export interface MCPConnectionResult {
-  success: boolean;
-  reAuth?: boolean;
+  success?: boolean;
+  reAuth: boolean;
   namespace?: string;
   tools?: string[];
+  error?: "reconnection_failed" | "token_exchange_failed" | "invalid_code" | "no_auth_provider";
+  message?: string;
 }
 
 export interface ElectronAPI {
   // Storage
   setStorage: (key: string, value: any) => Promise<boolean>;
   getStorage: (key: string) => Promise<any>;
-
 
   // MCP Remote Servers
   searchRemoteMCPServers: (term: string) => Promise<serverSearchResult[]>;
