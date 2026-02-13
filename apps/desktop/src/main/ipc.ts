@@ -10,7 +10,7 @@ ipcMain.handle("set-storage", (_event, key: string, value: any) => {
   storage.set(key, value);
 
   // Reload AI model if provider config changed
-  if (key === "provider::config") {
+  if (key.startsWith("provider::")) {
     model.reload();
   }
 

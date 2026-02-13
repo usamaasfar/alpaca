@@ -1,46 +1,99 @@
 import { create } from "zustand";
 
-export interface ProviderConfig {
+export type ProviderType = "openai" | "anthropic" | "ollama" | "google" | "openai-compatible";
+
+interface OpenAIConfig {
+  model: string;
+  apiKey: string;
+}
+
+interface AnthropicConfig {
+  model: string;
+  apiKey: string;
+}
+
+interface OllamaConfig {
+  model: string;
+}
+
+interface GoogleConfig {
+  model: string;
+  apiKey: string;
+}
+
+interface OpenAICompatibleConfig {
   model: string;
   baseUrl: string;
   apiKey: string;
 }
 
+export type ProviderConfig = OpenAIConfig | AnthropicConfig | OllamaConfig | GoogleConfig | OpenAICompatibleConfig;
+
 interface ProvidersSettingsStore {
   isLoading: boolean;
-  config?: ProviderConfig;
-  getProvider: () => Promise<void>;
-  setProvider: (config: ProviderConfig) => Promise<void>;
+  selectedProvider?: ProviderType;
+  providerConfig?: ProviderConfig;
+  initialize: () => Promise<void>;
+  getProvider: (provider: ProviderType) => Promise<{ model: string; baseUrl: string; apiKey: string }>;
+  setProvider: (provider: ProviderType, config: ProviderConfig) => Promise<void>;
 }
 
 export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) => ({
   isLoading: false,
-  config: undefined,
+  selectedProvider: undefined,
+  providerConfig: undefined,
 
-  getProvider: async () => {
+  initialize: async () => {
     set({ isLoading: true });
 
     try {
-      const configJson = await window.electronAPI.getStorage("provider::config");
-      if (!configJson) return set({ config: undefined, isLoading: false });
+      const selectedProvider = (await window.electronAPI.getStorage("provider::selected")) as ProviderType | undefined;
 
-      const parsedConfig = JSON.parse(configJson as string) as Partial<ProviderConfig>;
-      if (!parsedConfig.model || !parsedConfig.baseUrl || !parsedConfig.apiKey) {
-        return set({ config: undefined, isLoading: false });
-      }
-      set({ config: parsedConfig as ProviderConfig, isLoading: false });
+      if (!selectedProvider) return set({ selectedProvider: undefined, providerConfig: undefined, isLoading: false });
+
+      const configKey = `provider::${selectedProvider}::config`;
+      const configJson = await window.electronAPI.getStorage(configKey);
+
+      if (!configJson) return set({ selectedProvider, providerConfig: undefined, isLoading: false });
+
+      const providerConfig = JSON.parse(configJson as string) as ProviderConfig;
+      set({ selectedProvider, providerConfig, isLoading: false });
     } catch (error) {
       console.error(error);
-    } finally {
       set({ isLoading: false });
     }
   },
 
-  setProvider: async (config) => {
+  getProvider: async (provider: ProviderType) => {
+    const configKey = `provider::${provider}::config`;
+    const configJson = await window.electronAPI.getStorage(configKey);
+
+    let config = { model: "", baseUrl: "", apiKey: "" };
+    if (configJson) {
+      try {
+        const parsed = JSON.parse(configJson as string);
+        config = {
+          model: parsed.model || "",
+          baseUrl: "baseUrl" in parsed ? parsed.baseUrl || "" : "",
+          apiKey: "apiKey" in parsed ? parsed.apiKey || "" : "",
+        };
+      } catch (error) {
+        console.error("Failed to parse provider config:", error);
+      }
+    }
+
+    return config;
+  },
+
+  setProvider: async (provider, config) => {
     try {
-      const serialized = JSON.stringify({ model: config.model, baseUrl: config.baseUrl, apiKey: config.apiKey });
-      await window.electronAPI.setStorage("provider::config", serialized);
-      set({ config });
+      const configKey = `provider::${provider}::config`;
+      const serialized = JSON.stringify(config);
+      await window.electronAPI.setStorage(configKey, serialized);
+
+      await window.electronAPI.setStorage("provider::selected", provider);
+
+      set({ selectedProvider: provider, providerConfig: config });
     } catch (error) {
       console.error(error);
       throw error;
@@ -49,4 +102,4 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
 }));
 
 // Auto-initialize on store creation
-useProvidersSettingsStore.getState().getProvider();
+useProvidersSettingsStore.getState().initialize();
