@@ -63,7 +63,7 @@ export const SettingsProviders = memo(() => {
     };
 
     loadProviderConfig();
-  }, [watchedProvider, getProvider, form]);
+  }, [watchedProvider, getProvider]);
 
   const onSubmit = async (data: ProviderForm) => {
     // Manual validation based on provider
