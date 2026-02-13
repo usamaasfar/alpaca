@@ -87,11 +87,11 @@ export const useProvidersSettingsStore = create<ProvidersSettingsStore>((set) =>
 
   setProvider: async (provider, config) => {
     try {
-      await window.electronAPI.setStorage("provider::selected", provider);
-
       const configKey = `provider::${provider}::config`;
       const serialized = JSON.stringify(config);
       await window.electronAPI.setStorage(configKey, serialized);
+
+      await window.electronAPI.setStorage("provider::selected", provider);
 
       set({ selectedProvider: provider, providerConfig: config });
     } catch (error) {

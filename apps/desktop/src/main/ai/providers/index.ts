@@ -94,6 +94,7 @@ export const model = {
   },
 
   reload: () => {
+    cachedModel = null;
     return (cachedModel = model.load());
   },
 };
